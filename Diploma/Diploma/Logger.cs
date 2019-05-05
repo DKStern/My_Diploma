@@ -11,16 +11,16 @@ namespace Diploma
         public Logger()
         {
             Path = $"Log {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
-            FileInfo fileInfo = new FileInfo(Path);
-            if (fileInfo.Exists)
+            if(File.Exists(Path))
             {
-                fileInfo.Delete();
-                fileInfo.Create();
+                File.Delete(Path);
+                File.Create(Path).Close();
             }
             else
             {
-                fileInfo.Create();
+                File.Create(Path).Close();
             }
+
             sw = new StreamWriter(Path, true);
         }
 

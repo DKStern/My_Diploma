@@ -20,7 +20,10 @@ namespace Diploma
         private string path; //Path to the directory with data
         private WriteableBitmap bitmap;
         private int depth = 1291, frequency = 10000;
-        Logger logger = new Logger();
+        private Logger logger = new Logger();
+        private short[] fileBuffer;
+        private bool isRequested = true, isReady = false;
+
 
         public MainWindow()
         {
@@ -129,7 +132,14 @@ namespace Diploma
         /// </summary>
         private void FFT()
         {
+            while (true)
+            {
+                if (isReady)
+                {
+                   
 
+                }
+            }
         }
 
         /// <summary>
@@ -169,6 +179,51 @@ namespace Diploma
             }
         }
 
+        private void ReaderFile(string[] files)
+        {
+            int i = 1;
+            byte[] byteMas = null;
+            short[] soundLine = null;
+            byte[] b = new byte[2];
+            short K = 0; //Показатель степени
+            while (true)
+            {
+                if (isRequested)
+                {
+                    if (i > files.Length)
+                    {
+                        logger.Add("Читаем данные из " + i.ToString() + " файла...");
+                        var sw = new Stopwatch();
+                        sw.Start();
+                        byteMas = File.ReadAllBytes(files[i - 1]);
+                        if (soundLine == null)
+                        {
+                            soundLine = new short[byteMas.Length / 2];
+                        }
+                        for (int j = 0; j < byteMas.Length; j += 2)
+                        {
+                            b[0] = byteMas[j];
+                            b[1] = byteMas[j + 1];
+                            soundLine[j / 2] = BitConverter.ToInt16(b, 0);
+                        }
+                        fileBuffer = (short[])PowOfTwo(soundLine, ref K).Clone();
+                        sw.Stop();
+                        logger.Add("Данные считаны!");
+                        logger.Add($"Считываение данных заняло: {sw.Elapsed}");
+                        logger.Add("");
+
+                        isRequested = false;
+                        isReady = true;
+                        i++;
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Вычисления
         /// </summary>
@@ -178,27 +233,28 @@ namespace Diploma
             string[] fileList;
             fileList = Directory.GetFiles(path);
 
-            byte[] byteMas;
-            short[] soundLine;
-            byte[] b = new byte[2];
-            short K = 0; //Показатель степени
+            Task readTask = new Task(() => ReaderFile(fileList));
+            readTask.Start();
 
-            for (int i = 1; i <= depth; i++)
+            while (true)
             {
-                logger.Add("Читаем данные из " + i.ToString() + " файла...");
-                byteMas = File.ReadAllBytes(fileList[i - 1]);
-                soundLine = new short[byteMas.Length / 2];
-                for (int j = 0; j < byteMas.Length; j += 2)
+                if (isReady)
                 {
-                    b[0] = byteMas[j];
-                    b[1] = byteMas[j + 1];
-                    soundLine[j / 2] = BitConverter.ToInt16(b, 0);
-                }
-                logger.Add("Данные считаны!");
-                soundLine = (short[])PowOfTwo(soundLine, ref K).Clone();
+                    //Копирование
+                    isRequested = true;
+                    isReady = false;
+                    //Вычисления
 
-                //GPU
+                    
+                }
+
+                if (readTask.Status == TaskStatus.RanToCompletion && !isReady)
+                {
+                    break;
+                }
             }
+
+
         }
 
         private void startBtn_Click(object sender, RoutedEventArgs e)
