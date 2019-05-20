@@ -46,7 +46,6 @@ C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\ro\Xceed.Wp
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\ru\Xceed.Wpf.AvalonDock.resources.dll
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\sv\Xceed.Wpf.AvalonDock.resources.dll
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\zh-Hans\Xceed.Wpf.AvalonDock.resources.dll
-C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csprojAssemblyReference.cache
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\MainWindow.baml
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\MainWindow.g.cs
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\App.g.cs
@@ -58,3 +57,12 @@ C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csp
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csproj.CopyComplete
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.exe
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.pdb
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\CudaFFT.dll
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\ManagedCuda.dll
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\TDMSReader.dll
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\CudaFFT.pdb
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\CudaFFT.xml
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\ManagedCuda.pdb
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\ManagedCuda.xml
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\TDMSReader.pdb
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csprojResolveAssemblyReference.cache

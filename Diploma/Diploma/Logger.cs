@@ -5,9 +5,12 @@ namespace Diploma
 {
     public class Logger
     {
-        private string Path;
-        private StreamWriter sw;
+        private string Path; //Путь сохраняемого лога
+        private StreamWriter sw; 
 
+        /// <summary>
+        /// Конструктор логгера
+        /// </summary>
         public Logger()
         {
             Path = $"Log {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
@@ -28,14 +31,17 @@ namespace Diploma
         /// Добавить запись в логгер
         /// </summary>
         /// <param name="str">Запись</param>
-        public void Add(string str)
+        async public void Add(string str)
         {
-            //using (var sw = new StreamWriter(Path, true))
-            //{
-            //    sw.WriteLine(str);
-            //}
+            await sw.WriteLineAsync(str);
+        }
 
-            sw.WriteLine(str);
+        /// <summary>
+        /// Закрывает логгер
+        /// </summary>
+        public void Close()
+        {
+            sw.Close();
         }
 
     }

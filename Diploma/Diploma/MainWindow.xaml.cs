@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Media.Imaging;
+using ManagedCuda;
+using ManagedCuda.BasicTypes;
+using ManagedCuda.VectorTypes;
+using ManagedCuda.CudaFFT;
 
 namespace Diploma
 {
@@ -19,6 +23,8 @@ namespace Diploma
         private int fileCount = 0; //Count of files
         private string path; //Path to the directory with data
         private WriteableBitmap bitmap;
+        const double maxFreq = 10000.0;
+        const int bufSize = 4096;
         private int depth = 1291, frequency = 10000;
         private Logger logger = new Logger();
         private short[] fileBuffer;
@@ -40,6 +46,7 @@ namespace Diploma
         private void exitBtn_Click(object sender, RoutedEventArgs e)
         {
             logger.Add($"Завершение работы программы: {DateTime.Now.ToUniversalTime()} UTC");
+            logger.Close();
             Close();
         }
 
@@ -150,7 +157,7 @@ namespace Diploma
         /// <returns>Новые данные</returns>
         private short[] PowOfTwo(short[] soundLine, ref short K)
         {
-            logger.Add("Приводим размерность входных данных к степени двойки...");
+            logger.Add("ПОТОК ЧТЕНИЯ ДАННЫХ >> Приводим размерность входных данных к степени двойки...");
             int len = soundLine.Length;
             uint pow = 2;
             short k = 1;
@@ -174,7 +181,7 @@ namespace Diploma
                         newMas[i] = 0;
                 }
 
-                logger.Add("Размерность данных приведена к степени двойки! Показатель степени: " + K.ToString());
+                logger.Add("ПОТОК ЧТЕНИЯ ДАННЫХ >> Размерность данных приведена к степени двойки! Показатель степени: " + K.ToString());
                 return newMas;
             }
         }
@@ -190,9 +197,9 @@ namespace Diploma
             {
                 if (isRequested)
                 {
-                    if (i > files.Length)
+                    if (i <= files.Length)
                     {
-                        logger.Add("Читаем данные из " + i.ToString() + " файла...");
+                        logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Чтение данных из {i} файла...");
                         var sw = new Stopwatch();
                         sw.Start();
                         byteMas = File.ReadAllBytes(files[i - 1]);
@@ -208,13 +215,18 @@ namespace Diploma
                         }
                         fileBuffer = (short[])PowOfTwo(soundLine, ref K).Clone();
                         sw.Stop();
-                        logger.Add("Данные считаны!");
-                        logger.Add($"Считываение данных заняло: {sw.Elapsed}");
-                        logger.Add("");
+                        byteMas = null;
+                        GC.Collect();
+                        logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Считываение данных из {i} файла заняло: {sw.Elapsed.ToString()}");
+                        //logger.Add("");
 
                         isRequested = false;
                         isReady = true;
-                        i++;
+
+                        if (i == files.Length)
+                            return;
+                        else
+                            i++;
                     }
                     else
                     {
@@ -224,45 +236,171 @@ namespace Diploma
             }
         }
 
+        //Get new Index
+        private int GetIndex(int index, int nfft)
+        {
+            if (index == 0)
+                return -1;
+            double idx = Math.Log((double)index * maxFreq / (double)(nfft - 0)) * bufSize / Math.Log(maxFreq);
+            if (idx < 0.0)
+                return -1;
+            return (int)Math.Floor(idx);
+        }
+
+        //Get new Index
+        private int GetIndexLin(int index, int nfft)
+        {
+            return (int)Math.Floor((double)index * bufSize / nfft);
+        }
+
+
         /// <summary>
         /// Вычисления
         /// </summary>
         private void Start()
         {
             logger.Add("Получаем список файлов...");
-            string[] fileList;
+            logger.Add("");
+            string[] fileList; //список файлов
+            int buffSize = 0;
+            short counter = 1;
+            byte deviceID = 0; //Номер устройства
             fileList = Directory.GetFiles(path);
+            cuFloatComplex[] h_data; //Данные в формате CUDA (комплексные) на хосте
+            CudaDeviceVariable<cuFloatComplex> d_data; //Входные данные в формате видеокарты
+
+            Stopwatch watch = new Stopwatch();
+            Stopwatch stopwatch = new Stopwatch();
+
+            int nfft; //Размерность сжатых данных
+            float[] buffer;
+            int[] numbers;
+            int index;
+            string Path = $"Output {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
+            StreamWriter sw = new StreamWriter(Path, true);
 
             Task readTask = new Task(() => ReaderFile(fileList));
             readTask.Start();
+
+            CudaContext ctx = new CudaContext(deviceID, CUCtxFlags.MapHost | CUCtxFlags.BlockingSync); //Создание контекста вычислений на устройстве
 
             while (true)
             {
                 if (isReady)
                 {
                     //Копирование
+                    stopwatch.Reset();
+                    stopwatch.Start();
+                    buffSize = fileBuffer.Length;
+                    
+                    //Вычисления
+                    h_data = new cuFloatComplex[buffSize];
+
+                    for (int j = 0; j < buffSize; j++)
+                    {
+                        h_data[j].real = (float)Convert.ToDouble(fileBuffer[j]);
+                        h_data[j].imag = 0;
+                    }
+
                     isRequested = true;
                     isReady = false;
-                    //Вычисления
 
-                    
+                    d_data = new CudaDeviceVariable<cuFloatComplex>(buffSize); //Создание переменной на видеокарте и выделение памяти под неё
+                    d_data.CopyToDevice(h_data); //Копирование входных данных на видеокарту
+                    CudaFFTPlan1D plan = new CudaFFTPlan1D(d_data.Size, cufftType.C2C, 1); //Создание плана вычислений !!!Найти и расписать пояснение подробнее
+
+                    watch.Reset();
+                    watch.Start();
+                    plan.Exec(d_data.DevicePointer, TransformDirection.Forward); //Выполнение вычислений
+                    watch.Stop();
+                    h_data = d_data;
+
+                    //logger.Add($"Вычисления {counter} дорожки на GPU закончены!");
+                    logger.Add($"ПОТОК ОБРАБОТКИ ДАННЫХ >> Вычисление {counter} дорожки на GPU заняло: {watch.Elapsed.ToString()}");
+
+                    //Сжатие данных
+                    nfft = h_data.Length / 2 + 1;
+                    buffer = new float[bufSize];
+                    numbers = new int[bufSize];
+
+                    watch.Reset();
+                    watch.Start();
+                    int count = 0;
+                    for (int j = 0; j < nfft; j++) //до nfft
+                    {
+                        index = GetIndex(j, nfft); //nfft
+                        if (index < 0)
+                            count++;
+                        if (index >= 0)
+                        {
+                            buffer[index] += (float)Math.Sqrt(Math.Pow(h_data[j].real / (double)nfft, 2) + Math.Pow(h_data[counter].imag / (double)nfft, 2));
+                            numbers[index]++;
+                        }
+                    }
+
+                    for (int j = 0; j < bufSize; j++)
+                    {
+                        if (buffer[j] > 0)
+                        {
+                            buffer[j] /= (float)numbers[j];
+                        }
+                        else
+                            buffer[j] = -1.0f;
+                    }
+                    watch.Stop();
+                    logger.Add($"ПОТОК ОБРАБОТКИ ДАННЫХ >> Сжатие {counter} дорожки заняло: {watch.Elapsed.ToString()}");
+
+                    //Запись готовых данных в файл
+                    foreach (var item in buffer)
+                    {
+                        sw.Write(item + " ");
+                    }
+                    sw.WriteLine();
+                   
+
+                    count++;
+                    buffer = null;
+                    numbers = null;
+                    h_data = null;
+                    d_data.Dispose();
+                    plan.Dispose();
+                    GC.Collect();
+
+                    progressBar.Value++;
+                    stopwatch.Stop();
+                    logger.Add($"ПОТОК ОБРАБОТКИ ДАННЫХ >> Вычисление {counter++} дорожки заняло: {stopwatch.Elapsed.ToString()}");
+                    //logger.Add("");
                 }
 
                 if (readTask.Status == TaskStatus.RanToCompletion && !isReady)
                 {
+                    readTask.Dispose();
                     break;
                 }
             }
-
-
+            CudaContext.ProfilerStop();
+            ctx.Dispose();
+            sw.Close();
         }
 
         private void startBtn_Click(object sender, RoutedEventArgs e)
         {
+            Stopwatch sw = new Stopwatch();
+            logger.Add($"Начало вычислений: {DateTime.Now.ToUniversalTime()} UTC");
+            logger.Add("");
+            sw.Start();
+
             //Вычисления на GPU
             Start();
 
-            CreateImg();  
+            sw.Stop();
+            logger.Add($"Конец вычислений: {DateTime.Now.ToUniversalTime()} UTC");
+            logger.Add($"Вычисления заняли: {sw.Elapsed.ToString()}");
+            logger.Add("");
+
+
+            //Создание изображения
+            //CreateImg();  
         }
 
         /// <summary>
