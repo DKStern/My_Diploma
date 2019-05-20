@@ -236,18 +236,28 @@ namespace Diploma
             }
         }
 
-        //Get new Index
+        /// <summary>
+        /// Get new Index
+        /// </summary>
+        /// <param name="index">Текущий индекс</param>
+        /// <param name="nfft">Коэф. сжатия</param>
+        /// <returns>Индекс</returns>
         private int GetIndex(int index, int nfft)
         {
             if (index == 0)
                 return -1;
-            double idx = Math.Log((double)index * maxFreq / (double)(nfft - 0)) * bufSize / Math.Log(maxFreq);
+            double idx = Math.Log((double)index * maxFreq / (double)(nfft - 1)) * bufSize / Math.Log(maxFreq);
             if (idx < 0.0)
                 return -1;
             return (int)Math.Floor(idx);
         }
 
-        //Get new Index
+        /// <summary>
+        /// Get new Index
+        /// </summary>
+        /// <param name="index">Текущий индекс</param>
+        /// <param name="nfft">Коэф. сжатия</param>
+        /// <returns>Индекс</returns>
         private int GetIndexLin(int index, int nfft)
         {
             return (int)Math.Floor((double)index * bufSize / nfft);
@@ -454,6 +464,37 @@ namespace Diploma
             FinishColor = System.Drawing.Color.FromArgb(255, finishColorPiker.SelectedColor.Value.R, finishColorPiker.SelectedColor.Value.G, finishColorPiker.SelectedColor.Value.B);
             logger.Add($"Конечный цвет выбран: {FinishColor.ToString()}");
             logger.Add("");
+        }
+
+        private void openTDMS_Click(object sender, RoutedEventArgs e)
+        {
+            string path = "";
+            uint startPosition = 0;
+            uint length = 0;
+            Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
+            dialog.Filter = "TDMS file (*.tdms)|*.tdms|All files (*.*)|*.*";
+            if (dialog.ShowDialog() == true)
+            {
+                path = dialog.FileName;
+            }
+
+            using (var tdms = new NationalInstruments.Tdms.File(path))
+            {
+                tdms.Open();
+
+                startPosition = (uint)tdms.Properties["StartPosition[m]"]; //Есть свойство - начальная позиция (начальная глубина в метрах)
+                length = (uint)tdms.Properties["MeasureLength[m]"]; //Есть свойство - длина измерения в метрах
+
+                depthStartBox.Text = Convert.ToString(startPosition);
+                depthFinishBox.Text = Convert.ToString(startPosition + length);
+
+                foreach (var item in tdms.Groups["Measurement"].Channels["0"].GetData<short>())
+                {
+                    var a = item;
+                }
+
+                tdms.Dispose();
+            }
         }
 
         private void openBtn_Click(object sender, RoutedEventArgs e)

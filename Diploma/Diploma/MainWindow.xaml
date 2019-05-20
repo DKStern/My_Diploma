@@ -9,7 +9,8 @@
     <Grid>
         <Menu HorizontalAlignment="Left" Height="27" Margin="0,0,0,0" VerticalAlignment="Top" Width="1280">
             <MenuItem Header="Файл" Height="27" Width="47" HorizontalAlignment="Center">
-                <MenuItem x:Name="openBtn" Header="Открыть" Click="openBtn_Click"></MenuItem>
+                <MenuItem x:Name="openBtn" Header="Открыть данные" Click="openBtn_Click"></MenuItem>
+                <MenuItem x:Name="openTDMS" Header="Открыть TDMS файл" Click="openTDMS_Click"/>
                 <MenuItem x:Name="saveBtn" Header="Сохранить"></MenuItem>
                 <MenuItem x:Name="exitBtn" Header="Выход" Click="exitBtn_Click"></MenuItem>
             </MenuItem>
@@ -19,8 +20,8 @@
         </Menu>
         <GroupBox Header="Спектрограмма" HorizontalAlignment="Left" Height="683" Margin="10,27,0,0" VerticalAlignment="Top" Width="978">
             <Grid>
-                <Image x:Name="imageBox" Margin="85,10,16,220" MouseMove="imageBox_MouseMove"/>
-                <GroupBox Header="Управление визуализацией" HorizontalAlignment="Left" Height="205" Margin="10,446,0,0" VerticalAlignment="Top" Width="940">
+                <Image x:Name="imageBox" Margin="10,10,16,220" MouseMove="imageBox_MouseMove"/>
+                <GroupBox Header="Управление визуализацией" HorizontalAlignment="Left" Height="205" Margin="10,446,0,0" VerticalAlignment="Top" Width="940" IsEnabled="False">
                     <Grid>
                         <GroupBox Header="Значения в точке" HorizontalAlignment="Left" Height="79" Margin="755,0,-2,0" VerticalAlignment="Top" Width="175">
                             <Grid>
@@ -46,15 +47,15 @@
         </GroupBox>
         <GroupBox Header="Управление обработкой данных" HorizontalAlignment="Left" Height="683" Margin="993,27,0,0" VerticalAlignment="Top" Width="271">
             <Grid>
-                <GroupBox Header="Обработка в заданном диапазоне" HorizontalAlignment="Left" Height="163" Margin="10,171,0,0" VerticalAlignment="Top" Width="239">
+                <GroupBox Header="Обработка в заданном диапазоне" HorizontalAlignment="Left" Height="163" Margin="10,171,0,0" VerticalAlignment="Top" Width="239" IsEnabled="False">
                     <Grid>
                         <Label Content="Частота:" HorizontalAlignment="Left" Margin="10,5,0,0" VerticalAlignment="Top"/>
-                        <TextBox x:Name="frequencyStartBox" HorizontalAlignment="Left" Height="23" Margin="44,36,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="71"/>
+                        <TextBox x:Name="frequencyStartBox" HorizontalAlignment="Left" Height="23" Margin="44,36,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="71"/>
                         <TextBox x:Name="frequencyFinishBox" HorizontalAlignment="Left" Height="23" Margin="148,36,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="69"/>
                         <Label Content="до" HorizontalAlignment="Left" Margin="120,36,0,0" VerticalAlignment="Top" Height="23" Width="23"/>
                         <Label Content="От" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" Height="23" Width="34"/>
                         <Label Content="Глубина:" HorizontalAlignment="Left" Margin="10,77,0,0" VerticalAlignment="Top"/>
-                        <TextBox x:Name="depthStartBox" HorizontalAlignment="Left" Height="23" Margin="44,108,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="71"/>
+                        <TextBox x:Name="depthStartBox" HorizontalAlignment="Left" Height="23" Margin="44,108,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="71"/>
                         <TextBox x:Name="depthFinishBox" HorizontalAlignment="Left" Height="23" Margin="148,108,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="69"/>
                         <Label Content="до" HorizontalAlignment="Left" Margin="120,108,0,0" VerticalAlignment="Top" Height="23" Width="23"/>
                         <Label Content="От" HorizontalAlignment="Left" Margin="10,108,0,0" VerticalAlignment="Top" Height="23" Width="34"/>
