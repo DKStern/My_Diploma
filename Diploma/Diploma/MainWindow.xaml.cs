@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -29,7 +30,6 @@ namespace Diploma
         private Logger logger = new Logger();
         private short[] fileBuffer;
         private bool isRequested = true, isReady = false;
-
 
         public MainWindow()
         {
@@ -135,21 +135,6 @@ namespace Diploma
         }
 
         /// <summary>
-        /// Вычисляем FFT
-        /// </summary>
-        private void FFT()
-        {
-            while (true)
-            {
-                if (isReady)
-                {
-                   
-
-                }
-            }
-        }
-
-        /// <summary>
         /// Приведение размерности входных данных до ближайшей степени двойки
         /// </summary>
         /// <param name="soundLine">Входные данные</param>
@@ -236,6 +221,64 @@ namespace Diploma
             }
         }
 
+        private void ReaderFile()
+        {
+            using (var tdms = new NationalInstruments.Tdms.File(path))
+            {
+                tdms.Open();
+
+                int fileNumber = 0;
+                int count = 0;
+                short[] soundLine = null;
+                short K = 0; //Показатель степени
+                while (true)
+                {
+                    if (isRequested)
+                    {
+                        if (fileNumber < tdms.Groups["Measurement"].Channels.Count)
+                        {
+                            logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Чтение данных из {fileNumber} файла...");
+                            var sw = new Stopwatch();
+                            sw.Start();
+                            soundLine = new short[tdms.Groups["Measurement"].Channels[Convert.ToString(fileNumber)].DataCount];
+                            count = 0;
+
+                            //var list = tdms.Groups["Measurement"].Channels["0"].GetData<short>().ToArray();
+
+                            foreach (var item in (List<short>)tdms.Groups["Measurement"].Channels[Convert.ToString(fileNumber)].GetData<short>())
+                            {
+                                soundLine[count] = item;
+                                count++;
+                                if (count == tdms.Groups["Measurement"].Channels[Convert.ToString(fileNumber)].DataCount)
+                                    System.Windows.MessageBox.Show("");
+                            }
+
+                            fileBuffer = (short[])PowOfTwo(soundLine, ref K).Clone();
+                            sw.Stop();
+                            GC.Collect();
+                            logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Считываение данных из {fileNumber} файла заняло: {sw.Elapsed.ToString()}");
+
+                            isRequested = false;
+                            isReady = true;
+
+                            if (fileNumber == tdms.Groups["Measurement"].Channels.Count - 1)
+                            {
+                                tdms.Dispose();
+                                return;
+                            }
+                            else
+                                fileNumber++;
+                        }
+                        else
+                        {
+                            tdms.Dispose();
+                            return;
+                        }
+                    }
+                }
+            }           
+        }
+
         /// <summary>
         /// Get new Index
         /// </summary>
@@ -246,7 +289,7 @@ namespace Diploma
         {
             if (index == 0)
                 return -1;
-            double idx = Math.Log((double)index * maxFreq / (double)(nfft - 1)) * bufSize / Math.Log(maxFreq);
+            double idx = Math.Log((double)index * maxFreq / (double)(nfft - 0)) * bufSize / Math.Log(maxFreq);
             if (idx < 0.0)
                 return -1;
             return (int)Math.Floor(idx);
@@ -263,7 +306,6 @@ namespace Diploma
             return (int)Math.Floor((double)index * bufSize / nfft);
         }
 
-
         /// <summary>
         /// Вычисления
         /// </summary>
@@ -271,11 +313,11 @@ namespace Diploma
         {
             logger.Add("Получаем список файлов...");
             logger.Add("");
-            string[] fileList; //список файлов
             int buffSize = 0;
+            //string[] fileList; //список файлов
+            //fileList = Directory.GetFiles(path);
             short counter = 1;
             byte deviceID = 0; //Номер устройства
-            fileList = Directory.GetFiles(path);
             cuFloatComplex[] h_data; //Данные в формате CUDA (комплексные) на хосте
             CudaDeviceVariable<cuFloatComplex> d_data; //Входные данные в формате видеокарты
 
@@ -289,7 +331,7 @@ namespace Diploma
             string Path = $"Output {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
             StreamWriter sw = new StreamWriter(Path, true);
 
-            Task readTask = new Task(() => ReaderFile(fileList));
+            Task readTask = new Task(() => ReaderFile(/*fileList*/));
             readTask.Start();
 
             CudaContext ctx = new CudaContext(deviceID, CUCtxFlags.MapHost | CUCtxFlags.BlockingSync); //Создание контекста вычислений на устройстве
@@ -325,7 +367,6 @@ namespace Diploma
                     watch.Stop();
                     h_data = d_data;
 
-                    //logger.Add($"Вычисления {counter} дорожки на GPU закончены!");
                     logger.Add($"ПОТОК ОБРАБОТКИ ДАННЫХ >> Вычисление {counter} дорожки на GPU заняло: {watch.Elapsed.ToString()}");
 
                     //Сжатие данных
@@ -366,7 +407,6 @@ namespace Diploma
                         sw.Write(item + " ");
                     }
                     sw.WriteLine();
-                   
 
                     count++;
                     buffer = null;
@@ -468,7 +508,6 @@ namespace Diploma
 
         private void openTDMS_Click(object sender, RoutedEventArgs e)
         {
-            string path = "";
             uint startPosition = 0;
             uint length = 0;
             Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
@@ -488,13 +527,9 @@ namespace Diploma
                 depthStartBox.Text = Convert.ToString(startPosition);
                 depthFinishBox.Text = Convert.ToString(startPosition + length);
 
-                foreach (var item in tdms.Groups["Measurement"].Channels["0"].GetData<short>())
-                {
-                    var a = item;
-                }
-
                 tdms.Dispose();
             }
+
         }
 
         private void openBtn_Click(object sender, RoutedEventArgs e)

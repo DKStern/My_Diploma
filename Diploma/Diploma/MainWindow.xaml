@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         mc:Ignorable="d"
-        Title="Спектральный анализ" Height="720" Width="1280" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" WindowStyle="None" Initialized="Window_Initialized">
+        Title="Спектральный анализ" Height="746" Width="1280" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Initialized="Window_Initialized">
     <Grid>
         <Menu HorizontalAlignment="Left" Height="27" Margin="0,0,0,0" VerticalAlignment="Top" Width="1280">
             <MenuItem Header="Файл" Height="27" Width="47" HorizontalAlignment="Center">
