@@ -11,9 +11,9 @@ namespace Diploma
         /// <summary>
         /// Конструктор логгера
         /// </summary>
-        public Logger()
+        public Logger(string name)
         {
-            Path = $"Log {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
+            Path = $"{name} {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
             if(File.Exists(Path))
             {
                 File.Delete(Path);
@@ -31,9 +31,9 @@ namespace Diploma
         /// Добавить запись в логгер
         /// </summary>
         /// <param name="str">Запись</param>
-        async public void Add(string str)
+        public void Add(string str)
         {
-            await sw.WriteLineAsync(str);
+            sw.WriteLineAsync(str);
         }
 
         /// <summary>

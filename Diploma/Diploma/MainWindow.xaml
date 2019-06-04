@@ -9,8 +9,9 @@
     <Grid>
         <Menu HorizontalAlignment="Left" Height="27" Margin="0,0,0,0" VerticalAlignment="Top" Width="1280">
             <MenuItem Header="Файл" Height="27" Width="47" HorizontalAlignment="Center">
+                <MenuItem x:Name="createImg" Header="Создать спектрограмму" Click="createImg_Click"></MenuItem>
                 <MenuItem x:Name="openBtn" Header="Открыть данные" Click="openBtn_Click"></MenuItem>
-                <MenuItem x:Name="openTDMS" Header="Открыть TDMS файл" Click="openTDMS_Click"/>
+                <MenuItem x:Name="openTDMS" Header="Преобразовать TDMS файл" Click="openTDMS_Click"/>
                 <MenuItem x:Name="saveBtn" Header="Сохранить"></MenuItem>
                 <MenuItem x:Name="exitBtn" Header="Выход" Click="exitBtn_Click"></MenuItem>
             </MenuItem>

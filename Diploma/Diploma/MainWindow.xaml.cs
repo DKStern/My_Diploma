@@ -12,6 +12,7 @@ using ManagedCuda;
 using ManagedCuda.BasicTypes;
 using ManagedCuda.VectorTypes;
 using ManagedCuda.CudaFFT;
+using System.Runtime.InteropServices;
 
 namespace Diploma
 {
@@ -22,13 +23,14 @@ namespace Diploma
     {
         private System.Drawing.Color StartColor, FinishColor;
         private int fileCount = 0; //Count of files
-        private string path; //Path to the directory with data
-        private WriteableBitmap bitmap;
-        const double maxFreq = 10000.0;
-        const int bufSize = 4096;
-        private int depth = 1291, frequency = 10000;
-        private Logger logger = new Logger();
         private short[] fileBuffer;
+        private string path, tdmsPath; //Path to the directory with data
+        private WriteableBitmap bitmap;
+        private double maxFreq = 10000.0;
+        private int step = 1, startPosition = 0, lengthDepth = 0;
+        const int bufSize = 4096;
+        private Logger logger = new Logger("Main Log"), writeLogger = new Logger("Writer Log");
+        private Int64 dataOffset;
         private bool isRequested = true, isReady = false;
 
         public MainWindow()
@@ -65,73 +67,83 @@ namespace Diploma
             string[] str;
             int count = 0;
             int len = 0;
-            using (StreamReader sr = new StreamReader("OutPut.txt"))
+            Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
+            dialog.Title = "Выбор файла спектрограммы";
+            dialog.Filter = "txt file (*.txt)|*.txt";
+            string sPath;
+            if (dialog.ShowDialog() == true)
             {
-                logger.Add("Нахождение диапозона значения энергии...");
-                var st = new Stopwatch();
-                st.Start();
-                string line;
-                while ((line = sr.ReadLine()) != null)
+                sPath = dialog.FileName;
+
+                using (StreamReader sr = new StreamReader(sPath))
                 {
-                    count++;
-                    if (line[line.Length - 1] == ' ')
-                        line = line.Remove(line.Length - 1, 1);
-                    str = line.Split(' ');
-                    if (len < str.Length)
-                        len = str.Length;
-                    for (int i = 0; i < str.Length; i++)
+                    logger.Add("Нахождение диапозона значения энергии...");
+                    var st = new Stopwatch();
+                    st.Start();
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
                     {
-                        var d = Convert.ToDouble(str[i]);
-                        if (d > max)
+                        count++;
+                        if (line[line.Length - 1] == ' ')
+                            line = line.Remove(line.Length - 1, 1);
+                        str = line.Split(' ');
+                        if (len < str.Length)
+                            len = str.Length;
+                        for (int i = 0; i < str.Length; i++)
                         {
-                            max = d;
-                        }
-                        if (d < min)
-                        {
-                            min = d;
+                            var d = Convert.ToDouble(str[i]);
+                            if (d > max)
+                            {
+                                max = d;
+                            }
+                            if (d < min)
+                            {
+                                min = d;
+                            }
                         }
                     }
+                    st.Stop();
+                    logger.Add($"Диапазон найден: от {min} до {max}");
+                    logger.Add($"Нахождение заняло: {st.Elapsed}");
                 }
-                st.Stop();
-                logger.Add($"Диапазон найден: от {min} до {max}");
-                logger.Add($"Нахождение заняло: {st.Elapsed}");
-            }
-            heigth = count;
-            width = len;
-            Bitmap bmp = new Bitmap(width, heigth);
-            int y = 0;
-            using (var sr = new StreamReader("Output.txt"))
-            {
-                logger.Add("Создание изображения из файла...");
-                var st = new Stopwatch();
-                st.Start();
-                string line;
-                while ((line = sr.ReadLine()) != null)
+                heigth = count;
+                width = len;
+                Bitmap bmp = new Bitmap(width, heigth);
+                int y = 0;
+                using (var sr = new StreamReader(sPath))
                 {
-                    if (line[line.Length - 1] == ' ')
-                        line = line.Remove(line.Length - 1, 1);
-                    str = line.Split(' ');
-                    for (int x = 0; x < str.Length; x++)
+                    logger.Add("Создание изображения из файла...");
+                    var st = new Stopwatch();
+                    st.Start();
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
                     {
-                        color = GetColors(min, max, Convert.ToDouble(str[x]));
-                        bmp.SetPixel(x, y, color);
+                        if (line[line.Length - 1] == ' ')
+                            line = line.Remove(line.Length - 1, 1);
+                        str = line.Split(' ');
+                        for (int x = 0; x < str.Length; x++)
+                        {
+                            color = GetColors(min, max, Convert.ToDouble(str[x]));
+                            bmp.SetPixel(x, y, color);
+                        }
+                        y++;
                     }
-                    y++;
+                    st.Stop();
+                    logger.Add("Изображение создано");
+                    logger.Add($"Создание изображения заняло: {st.Elapsed}");
                 }
-                st.Stop();
-                logger.Add("Изображение создано");
-                logger.Add($"Создание изображения заняло: {st.Elapsed}");
+
+                bmp.Save("Pic.png");
+                bmp.Dispose();
+                watch.Stop();
+                logger.Add("Изображение сохранено: Pic.png");
+                ShowImg();
+                logger.Add($"Визуализация заняла: {watch.Elapsed}");
+                logger.Add("");
+                GC.Collect(1, GCCollectionMode.Forced);
+                GC.WaitForPendingFinalizers();
             }
 
-            bmp.Save("Pic.png");
-            bmp.Dispose();
-            watch.Stop();
-            logger.Add("Изображение сохранено: Pic.png");
-            ShowImg();
-            logger.Add($"Визуализация заняла: {watch.Elapsed}");
-            logger.Add("");
-            GC.Collect(1, GCCollectionMode.Forced);
-            GC.WaitForPendingFinalizers();
         }
 
         /// <summary>
@@ -184,7 +196,7 @@ namespace Diploma
                 {
                     if (i <= files.Length)
                     {
-                        logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Чтение данных из {i} файла...");
+                        writeLogger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Чтение данных из {i} файла...");
                         var sw = new Stopwatch();
                         sw.Start();
                         byteMas = File.ReadAllBytes(files[i - 1]);
@@ -202,7 +214,7 @@ namespace Diploma
                         sw.Stop();
                         byteMas = null;
                         GC.Collect();
-                        logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Считываение данных из {i} файла заняло: {sw.Elapsed.ToString()}");
+                        writeLogger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Считываение данных из {i} файла заняло: {sw.Elapsed.ToString()}");
                         //logger.Add("");
 
                         isRequested = false;
@@ -221,62 +233,66 @@ namespace Diploma
             }
         }
 
-        private void ReaderFile()
+        private short[] GetData(int num)
         {
-            using (var tdms = new NationalInstruments.Tdms.File(path))
+            using (var fstream = new FileStream(path, FileMode.Open))
             {
-                tdms.Open();
-
-                int fileNumber = 0;
-                int count = 0;
-                short[] soundLine = null;
-                short K = 0; //Показатель степени
+                byte[] b = new byte[4];
+                List<short> list = new List<short>();
+                fstream.Seek(dataOffset + num * sizeof(short), SeekOrigin.Begin);
                 while (true)
                 {
-                    if (isRequested)
+                    fstream.Read(b, 0, 4);
+                    list.Add(BitConverter.ToInt16(b, 0));
+                    try
                     {
-                        if (fileNumber < tdms.Groups["Measurement"].Channels.Count)
-                        {
-                            logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Чтение данных из {fileNumber} файла...");
-                            var sw = new Stopwatch();
-                            sw.Start();
-                            soundLine = new short[tdms.Groups["Measurement"].Channels[Convert.ToString(fileNumber)].DataCount];
-                            count = 0;
-
-                            //var list = tdms.Groups["Measurement"].Channels["0"].GetData<short>().ToArray();
-
-                            foreach (var item in (List<short>)tdms.Groups["Measurement"].Channels[Convert.ToString(fileNumber)].GetData<short>())
-                            {
-                                soundLine[count] = item;
-                                count++;
-                                if (count == tdms.Groups["Measurement"].Channels[Convert.ToString(fileNumber)].DataCount)
-                                    System.Windows.MessageBox.Show("");
-                            }
-
-                            fileBuffer = (short[])PowOfTwo(soundLine, ref K).Clone();
-                            sw.Stop();
-                            GC.Collect();
-                            logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Считываение данных из {fileNumber} файла заняло: {sw.Elapsed.ToString()}");
-
-                            isRequested = false;
-                            isReady = true;
-
-                            if (fileNumber == tdms.Groups["Measurement"].Channels.Count - 1)
-                            {
-                                tdms.Dispose();
-                                return;
-                            }
-                            else
-                                fileNumber++;
-                        }
-                        else
-                        {
-                            tdms.Dispose();
-                            return;
-                        }
+                        fstream.Seek(Convert.ToInt64((lengthDepth - 1) * sizeof(short)), SeekOrigin.Current);
+                    }
+                    catch
+                    {
+                        break;
                     }
                 }
-            }           
+                return list.ToArray();
+            }
+        }
+
+        private void ReaderFile()
+        {
+            int channelNumbert = 0;
+            short[] soundLine = null;
+            short K = 0; //Показатель степени
+
+            while (true)
+            {
+                if (isRequested)
+                {
+                    if (channelNumbert < lengthDepth)
+                    {
+                        logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Чтение данных из {channelNumbert + 1} канала...");
+                        var sw = new Stopwatch();
+                        sw.Start();
+                        soundLine = GetData(channelNumbert);
+
+                        fileBuffer = (short[])PowOfTwo(soundLine, ref K).Clone();
+                        sw.Stop();
+                        GC.Collect();
+                        logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Считываение данных из {channelNumbert +1} канала заняло: {sw.Elapsed.ToString()}");
+
+                        isRequested = false;
+                        isReady = true;
+
+                        if (channelNumbert == lengthDepth - 1)
+                        {
+                            return;
+                        }
+                        else
+                            channelNumbert++;
+                    }
+                    else
+                        return;
+                }
+            }
         }
 
         /// <summary>
@@ -314,8 +330,8 @@ namespace Diploma
             logger.Add("Получаем список файлов...");
             logger.Add("");
             int buffSize = 0;
-            //string[] fileList; //список файлов
-            //fileList = Directory.GetFiles(path);
+            string[] fileList; //список файлов
+            fileList = Directory.GetFiles(path);
             short counter = 1;
             byte deviceID = 0; //Номер устройства
             cuFloatComplex[] h_data; //Данные в формате CUDA (комплексные) на хосте
@@ -331,7 +347,7 @@ namespace Diploma
             string Path = $"Output {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
             StreamWriter sw = new StreamWriter(Path, true);
 
-            Task readTask = new Task(() => ReaderFile(/*fileList*/));
+            Task readTask = new Task(() => ReaderFile(fileList));
             readTask.Start();
 
             CudaContext ctx = new CudaContext(deviceID, CUCtxFlags.MapHost | CUCtxFlags.BlockingSync); //Создание контекста вычислений на устройстве
@@ -499,6 +515,11 @@ namespace Diploma
             logger.Add("");
         }
 
+        private void createImg_Click(object sender, RoutedEventArgs e)
+        {
+            CreateImg();
+        }
+
         private void finishColorPiker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e)
         {
             FinishColor = System.Drawing.Color.FromArgb(255, finishColorPiker.SelectedColor.Value.R, finishColorPiker.SelectedColor.Value.G, finishColorPiker.SelectedColor.Value.B);
@@ -506,30 +527,137 @@ namespace Diploma
             logger.Add("");
         }
 
+        private void TDMS()
+        {
+            using (var fstream = new FileStream(tdmsPath, FileMode.Open))
+            {
+                byte[] b4 = new byte[4];
+                FileStream[] streams = new FileStream[lengthDepth];
+                for (int j = 0; j < lengthDepth; j++)
+                {
+                    streams[j] = new FileStream($"{path}\\data{j}", FileMode.Create);
+                }
+
+                fstream.Seek(dataOffset, SeekOrigin.Begin);
+                int i = 0;
+                ulong l = 0;
+                int count = 0;
+                while ((count = fstream.Read(b4, 0, 4)) > 0)
+                {
+                    try
+                    {
+                       
+                        l += 4;
+                        streams[i].Write(b4, 0, 4);
+                        if (i == lengthDepth - 1)
+                            i = 0;
+                        else
+                            i++;
+                    }
+                    catch
+                    {
+                        
+                        break;
+                    }
+                }
+                for (int j = 0; j < lengthDepth; j++)
+                {
+                    streams[j].Close();
+                }
+                fstream.Close();
+            }
+        }
+
         private void openTDMS_Click(object sender, RoutedEventArgs e)
         {
-            uint startPosition = 0;
-            uint length = 0;
             Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
+            dialog.Title = "Выбор TDMS файла";
             dialog.Filter = "TDMS file (*.tdms)|*.tdms|All files (*.*)|*.*";
             if (dialog.ShowDialog() == true)
             {
-                path = dialog.FileName;
+                tdmsPath = dialog.FileName;
             }
-
-            using (var tdms = new NationalInstruments.Tdms.File(path))
+            if (path != "")
             {
-                tdms.Open();
+                using (FileStream fstream = new FileStream(tdmsPath, FileMode.Open))
+                {
+                    byte[] b4 = new byte[4];
+                    byte[] b8 = new byte[8];
 
-                startPosition = (uint)tdms.Properties["StartPosition[m]"]; //Есть свойство - начальная позиция (начальная глубина в метрах)
-                length = (uint)tdms.Properties["MeasureLength[m]"]; //Есть свойство - длина измерения в метрах
+                    // Значению смешения самих данных
+                    fstream.Seek(20, SeekOrigin.Current);
+                    fstream.Read(b8, 0, 8);
+                    dataOffset = 28 + Convert.ToInt64(BitConverter.ToUInt64(b8, 0)); // Data Offset in the file
 
-                depthStartBox.Text = Convert.ToString(startPosition);
-                depthFinishBox.Text = Convert.ToString(startPosition + length);
+                    // Значению самих данных
+                    fstream.Seek(4, SeekOrigin.Current);
+                    fstream.Read(b4, 0, 4);
+                    var num = BitConverter.ToUInt32(b4, 0);
+                    byte[] str = new byte[num];
+                    fstream.Read(str, 0, str.Length);
+                    var name = System.Text.Encoding.Default.GetString(str);
+                    fstream.Read(b4, 0, 4);
+                    num = BitConverter.ToUInt32(b4, 0); //Нет данных
+                    fstream.Read(b4, 0, 4);
+                    num = BitConverter.ToUInt32(b4, 0); //Количество свойств
 
-                tdms.Dispose();
+                    // Имя
+                    fstream.Read(b4, 0, 4);
+                    num = BitConverter.ToUInt32(b4, 0); //Длина имени свойства
+                    fstream.Seek(num + 4, SeekOrigin.Current);
+                    fstream.Read(b4, 0, 4);
+                    num = BitConverter.ToUInt32(b4, 0); //Длина строки значения
+                    fstream.Seek(num, SeekOrigin.Current);
+
+                    //Частота
+                    fstream.Read(b4, 0, 4);
+                    num = BitConverter.ToUInt32(b4, 0); //Длина имени свойства
+                    fstream.Seek(num + 4, SeekOrigin.Current);
+                    fstream.Read(b8, 0, 8);
+                    var dnum = BitConverter.ToDouble(b8, 0); // значение
+                    maxFreq = Convert.ToDouble(dnum);
+
+                    // Шаг глубины
+                    fstream.Read(b4, 0, 4);
+                    num = BitConverter.ToUInt32(b4, 0); //Длина имени свойства
+                    fstream.Seek(num + 4, SeekOrigin.Current);
+                    fstream.Read(b8, 0, 8);
+                    dnum = BitConverter.ToDouble(b8, 0); // значение
+                    step = Convert.ToInt32(dnum);
+
+                    // Начальное значение глубины
+                    fstream.Read(b4, 0, 4);
+                    num = BitConverter.ToUInt32(b4, 0); //Длина имени свойства
+                    fstream.Seek(num + 4, SeekOrigin.Current);
+                    fstream.Read(b4, 0, 4);
+                    dnum = BitConverter.ToUInt32(b4, 0); // значение
+                    startPosition = Convert.ToInt32(dnum);
+                    depthStartBox.Text = Convert.ToString(startPosition);
+
+                    // глубина
+                    fstream.Read(b4, 0, 4);
+                    num = BitConverter.ToUInt32(b4, 0); //Длина имени свойства
+                    fstream.Seek(num + 4, SeekOrigin.Current);
+                    fstream.Read(b4, 0, 4);
+                    dnum = BitConverter.ToUInt32(b4, 0); // значение
+                    lengthDepth = Convert.ToInt32(dnum);
+                    depthFinishBox.Text = Convert.ToString(startPosition + lengthDepth);
+
+                    FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog();
+                    folderBrowserDialog.Description = "Выберите папку сохранения результатов разбиения TMDS файла.\nУбедитесь, что папка пустая!";
+                    if (folderBrowserDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    {
+                        path = folderBrowserDialog.SelectedPath;
+
+                        Task task = new Task(() => TDMS());
+                        task.Start();
+                    }
+                    fstream.Close();
+                }
             }
 
+            
+            //TDMS();
         }
 
         private void openBtn_Click(object sender, RoutedEventArgs e)
@@ -545,7 +673,6 @@ namespace Diploma
                     depthFinishBox.Text = Convert.ToString(fileCount);
                     progressBar.Value = 0;
                     progressBar.Maximum = fileCount;
-                    //helpMas = null;
                     logger.Add($"Папка выбрана: {path}");
                     logger.Add($"Файлов в папке: {fileCount.ToString()}");
                     logger.Add("");
@@ -571,8 +698,8 @@ namespace Diploma
             var mousePoint = new System.Windows.Point(e.GetPosition(null).X, e.GetPosition(null).Y);
             var xNew = (mousePoint.X - pointStart.X) / imageBox.ActualWidth;
             var yNew = (mousePoint.Y - pointStart.Y) / imageBox.ActualHeight;
-            XLabel.Content = $"Частота: {Convert.ToInt32(xNew * frequency)} Гц";
-            YLabel.Content = $"Глубина: {Convert.ToInt32(yNew * depth)} метров";
+            XLabel.Content = $"Частота: {Convert.ToInt32(xNew * maxFreq)} Гц";
+            YLabel.Content = $"Глубина: {Convert.ToInt32(yNew * (startPosition + lengthDepth))} метров";
         }
 
         /// <summary>
