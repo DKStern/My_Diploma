@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -12,16 +11,17 @@ using ManagedCuda;
 using ManagedCuda.BasicTypes;
 using ManagedCuda.VectorTypes;
 using ManagedCuda.CudaFFT;
+using Diploma.Classes;
+using Diploma.Forms;
 using System.Runtime.InteropServices;
+using System.Drawing.Imaging;
 
 namespace Diploma
 {
-    /// <summary>
-    /// Логика взаимодействия для MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
-        private System.Drawing.Color StartColor, FinishColor;
+        private ColorData colorData;
+        private Color StartColor, FinishColor;
         private int fileCount = 0; //Count of files
         private short[] fileBuffer;
         private string path, tdmsPath; //Path to the directory with data
@@ -29,9 +29,11 @@ namespace Diploma
         private double maxFreq = 10000.0;
         private int step = 1, startPosition = 0, lengthDepth = 0;
         const int bufSize = 4096;
-        private Logger logger = new Logger("Main Log"), writeLogger = new Logger("Writer Log");
-        private Int64 dataOffset;
+        private Logger logger, writeLogger;
+        private long dataOffset;
         private bool isRequested = true, isReady = false;
+        private string logPath;
+        private long nfft;
 
         public MainWindow()
         {
@@ -41,14 +43,38 @@ namespace Diploma
         private void Window_Initialized(object sender, EventArgs e)
         {
             imageBox.Source = bitmap;
+            logPath = $"Logs {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}";
+            Directory.CreateDirectory(logPath);
+            colorData = new ColorData();
+            logger = new Logger($"{logPath}\\Main Log");
+            writeLogger = new Logger($"{logPath}\\Writer Log");
             logger.Add($"Начало работы программы: {DateTime.Now.ToUniversalTime()} UTC");
             logger.Add("");
+            StartColor = Color.FromArgb(255, 95, 255, 197);
+            FinishColor = Color.FromArgb(255, 133, 8, 8);
+            startColorPiker.SelectedColor = GetColor(95, 255, 197);
+            finishColorPiker.SelectedColor = GetColor(133, 8, 8);
+        }
+
+        /// <summary>
+        /// Создаёт цвет из RGB
+        /// </summary>
+        /// <param name="r">Значение красного цвета</param>
+        /// <param name="g">Значение зелёного цвета</param>
+        /// <param name="b">Значение синего цвета</param>
+        /// <returns>Цвет</returns>
+        private System.Windows.Media.Color GetColor(byte r, byte g, byte b)
+        {
+            System.Windows.Media.Color color = new System.Windows.Media.Color();
+            color.A = 255;
+            color.R = r;
+            color.G = g;
+            color.B = b;
+            return color;
         }
 
         private void exitBtn_Click(object sender, RoutedEventArgs e)
         {
-            logger.Add($"Завершение работы программы: {DateTime.Now.ToUniversalTime()} UTC");
-            logger.Close();
             Close();
         }
 
@@ -57,12 +83,12 @@ namespace Diploma
         /// </summary>
         private void CreateImg()
         {
-            logger.Add("Визуализация данных...");
+            logger.Add("ВИЗУАЛИЗАТОР >> Визуализация данных...");
             Stopwatch watch = new Stopwatch();
             watch.Start();
             int width, heigth;
             double max = double.MinValue, min = double.MaxValue;
-            System.Drawing.Color color;
+            Color color;
             List<string> file = new List<string>();
             string[] str;
             int count = 0;
@@ -77,10 +103,19 @@ namespace Diploma
 
                 using (StreamReader sr = new StreamReader(sPath))
                 {
-                    logger.Add("Нахождение диапозона значения энергии...");
+                    logger.Add("ВИЗУАЛИЗАТОР >> Нахождение диапозона значения энергии...");
                     var st = new Stopwatch();
                     st.Start();
                     string line;
+                    str = sr.ReadLine().Split(' ');
+                    startPosition = Int32.Parse(str[0]);
+                    lengthDepth = Int32.Parse(str[1]);
+                    depthStartBox.Text = str[0];
+                    depthFinishBox.Text = $"{startPosition + lengthDepth}";
+                    str = sr.ReadLine().Split(' ');
+                    nfft = Int64.Parse(str[0]);
+                    maxFreq = Int32.Parse(str[1]);
+
                     while ((line = sr.ReadLine()) != null)
                     {
                         count++;
@@ -103,8 +138,8 @@ namespace Diploma
                         }
                     }
                     st.Stop();
-                    logger.Add($"Диапазон найден: от {min} до {max}");
-                    logger.Add($"Нахождение заняло: {st.Elapsed}");
+                    logger.Add($"ВИЗУАЛИЗАТОР >> Диапазон найден: от {min} до {max}");
+                    logger.Add($"ВИЗУАЛИЗАТОР >> Нахождение заняло: {st.Elapsed}");
                 }
                 heigth = count;
                 width = len;
@@ -112,10 +147,11 @@ namespace Diploma
                 int y = 0;
                 using (var sr = new StreamReader(sPath))
                 {
-                    logger.Add("Создание изображения из файла...");
+                    logger.Add("ВИЗУАЛИЗАТОР >> Создание изображения из файла...");
                     var st = new Stopwatch();
                     st.Start();
-                    string line;
+                    string line = sr.ReadLine();
+                    sr.ReadLine();
                     while ((line = sr.ReadLine()) != null)
                     {
                         if (line[line.Length - 1] == ' ')
@@ -129,21 +165,20 @@ namespace Diploma
                         y++;
                     }
                     st.Stop();
-                    logger.Add("Изображение создано");
-                    logger.Add($"Создание изображения заняло: {st.Elapsed}");
+                    logger.Add("ВИЗУАЛИЗАТОР >> Изображение создано");
+                    logger.Add($"ВИЗУАЛИЗАТОР >> Создание изображения заняло: {st.Elapsed}");
                 }
 
                 bmp.Save("Pic.png");
                 bmp.Dispose();
                 watch.Stop();
-                logger.Add("Изображение сохранено: Pic.png");
+                logger.Add("ВИЗУАЛИЗАТОР >> Изображение сохранено: Pic.png");
                 ShowImg();
-                logger.Add($"Визуализация заняла: {watch.Elapsed}");
+                logger.Add($"ВИЗУАЛИЗАТОР >> Визуализация заняла: {watch.Elapsed}");
                 logger.Add("");
                 GC.Collect(1, GCCollectionMode.Forced);
                 GC.WaitForPendingFinalizers();
             }
-
         }
 
         /// <summary>
@@ -154,7 +189,7 @@ namespace Diploma
         /// <returns>Новые данные</returns>
         private short[] PowOfTwo(short[] soundLine, ref short K)
         {
-            logger.Add("ПОТОК ЧТЕНИЯ ДАННЫХ >> Приводим размерность входных данных к степени двойки...");
+            writeLogger.Add("ПОТОК ЧТЕНИЯ ДАННЫХ >> Приводим размерность входных данных к степени двойки...");
             int len = soundLine.Length;
             uint pow = 2;
             short k = 1;
@@ -178,11 +213,15 @@ namespace Diploma
                         newMas[i] = 0;
                 }
 
-                logger.Add("ПОТОК ЧТЕНИЯ ДАННЫХ >> Размерность данных приведена к степени двойки! Показатель степени: " + K.ToString());
+                writeLogger.Add("ПОТОК ЧТЕНИЯ ДАННЫХ >> Размерность данных приведена к степени двойки! Показатель степени: " + K.ToString());
                 return newMas;
             }
         }
 
+        /// <summary>
+        /// Чтение файлов для FFT
+        /// </summary>
+        /// <param name="files">Список файлов</param>
         private void ReaderFile(string[] files)
         {
             int i = 1;
@@ -229,68 +268,6 @@ namespace Diploma
                     {
                         return;
                     }
-                }
-            }
-        }
-
-        private short[] GetData(int num)
-        {
-            using (var fstream = new FileStream(path, FileMode.Open))
-            {
-                byte[] b = new byte[4];
-                List<short> list = new List<short>();
-                fstream.Seek(dataOffset + num * sizeof(short), SeekOrigin.Begin);
-                while (true)
-                {
-                    fstream.Read(b, 0, 4);
-                    list.Add(BitConverter.ToInt16(b, 0));
-                    try
-                    {
-                        fstream.Seek(Convert.ToInt64((lengthDepth - 1) * sizeof(short)), SeekOrigin.Current);
-                    }
-                    catch
-                    {
-                        break;
-                    }
-                }
-                return list.ToArray();
-            }
-        }
-
-        private void ReaderFile()
-        {
-            int channelNumbert = 0;
-            short[] soundLine = null;
-            short K = 0; //Показатель степени
-
-            while (true)
-            {
-                if (isRequested)
-                {
-                    if (channelNumbert < lengthDepth)
-                    {
-                        logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Чтение данных из {channelNumbert + 1} канала...");
-                        var sw = new Stopwatch();
-                        sw.Start();
-                        soundLine = GetData(channelNumbert);
-
-                        fileBuffer = (short[])PowOfTwo(soundLine, ref K).Clone();
-                        sw.Stop();
-                        GC.Collect();
-                        logger.Add($"ПОТОК ЧТЕНИЯ ДАННЫХ >> Считываение данных из {channelNumbert +1} канала заняло: {sw.Elapsed.ToString()}");
-
-                        isRequested = false;
-                        isReady = true;
-
-                        if (channelNumbert == lengthDepth - 1)
-                        {
-                            return;
-                        }
-                        else
-                            channelNumbert++;
-                    }
-                    else
-                        return;
                 }
             }
         }
@@ -344,8 +321,10 @@ namespace Diploma
             float[] buffer;
             int[] numbers;
             int index;
+            bool firstTime = true;
             string Path = $"Output {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
             StreamWriter sw = new StreamWriter(Path, true);
+            sw.WriteLine($"{startPosition} {lengthDepth}");
 
             Task readTask = new Task(() => ReaderFile(fileList));
             readTask.Start();
@@ -389,6 +368,11 @@ namespace Diploma
                     nfft = h_data.Length / 2 + 1;
                     buffer = new float[bufSize];
                     numbers = new int[bufSize];
+                    if (firstTime)
+                    {
+                        sw.WriteLine($"{nfft} {maxFreq}");
+                        firstTime = false;
+                    }
 
                     watch.Reset();
                     watch.Start();
@@ -520,6 +504,130 @@ namespace Diploma
             CreateImg();
         }
 
+        private void addColorBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ColorPicker colorPicker = new ColorPicker(colorData, logPath);
+            colorPicker.ShowDialog();
+            if (colorPicker.DialogResult == true)
+            {
+                colorData = colorPicker.colorData;
+            }
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            logger.Add($"Завершение работы программы: {DateTime.Now.ToUniversalTime()} UTC");
+            logger.Flush();
+            logger.Close();
+            writeLogger.Add($"Завершение работы программы: {DateTime.Now.ToUniversalTime()} UTC");
+            writeLogger.Flush();
+            writeLogger.Close();
+        }
+
+        /// <summary>
+        /// Проверяет, входит ли точка в заданную область
+        /// </summary>
+        /// <param name="x">Координата X заданной точки</param>
+        /// <param name="y">Координата Y заданной точки</param>
+        /// <param name="xS">Координата X начальной точки области</param>
+        /// <param name="xF">Координата X конечной точки области</param>
+        /// <param name="yS">Координата Y начальной точки области</param>
+        /// <param name="yF">Координата Y конечной точки области</param>
+        /// <returns>Входит или нет</returns>
+        private bool IsInside(int x, int y, int xS, int xF, int yS, int yF)
+        {
+            var pointStart = imageBox.TranslatePoint(new System.Windows.Point(0, 0), this);
+            var xNew = Math.Exp((double)x / bufSize * Math.Log(maxFreq));
+            var yNew = y + startPosition;
+
+            if (xNew >= xS && xNew <= xF && yNew >= yS && yNew <= yF)
+                return true;
+            else
+                return false;
+        }
+
+        /// <summary>
+        /// Возращает затемнённую версию цвета
+        /// </summary>
+        /// <param name="color">Цвет</param>
+        /// <returns>Затемнённая версия</returns>
+        private Color GetDarker(Color color)
+        {
+            double r, g, b;
+            double H = color.GetHue(), S = color.GetSaturation(), V = color.GetBrightness();
+            V -= 0.25;
+            if (V < 0)
+                V = 0;
+            var C = V * S;
+            var X = C * (1 - Math.Abs(H / 60 % 2 - 1));
+            var m = V - C;
+            if (0 <= H && H < 60)
+            {
+                r = C;
+                g = X;
+                b = 0;
+            }
+            else if (60 <= H && H < 120)
+            {
+                r = X;
+                g = C;
+                b = 0;
+            }
+            else if (120 <= H && H < 180)
+            {
+                r = 0;
+                g = C;
+                b = X;
+            }
+            else if (180 <= H && H < 240)
+            {
+                r = 0;
+                g = X;
+                b = C;
+            }
+            else if (240 <= H && H < 300)
+            {
+                r = X;
+                g = 0;
+                b = C;
+            }
+            else
+            {
+                r = C;
+                g = 0;
+                b = X;
+            }
+
+            r = 255 * (r + m);
+            g = 255 * (g + m);
+            b = 255 * (b + m);
+            return Color.FromArgb(Convert.ToInt32(r), Convert.ToInt32(g), Convert.ToInt32(b));
+        }
+
+        private void selectBtn_Click(object sender, RoutedEventArgs e)
+        {
+            Bitmap b;
+            using (var fs = new FileStream("Pic.png", FileMode.Open))
+               b = new Bitmap(fs);
+            int xS, xF, yS, yF;
+
+            for (int i = 0; i < b.Width; i++)
+                for (int j = 0; j < b.Height; j++)
+                {
+                    xS = Int32.Parse(xSBox.Text);
+                    xF = Int32.Parse(xFBox.Text);
+                    yS = Int32.Parse(ySBox.Text);
+                    yF = Int32.Parse(yFBox.Text);
+                    if (!IsInside(i, j, xS, xF, yS, yF))
+                    {
+                        b.SetPixel(i, j, GetDarker(b.GetPixel(i, j)));
+                    }
+                }
+            b.Save("Pic.png");
+            b.Dispose();
+            ShowImg();
+        }
+
         private void finishColorPiker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e)
         {
             FinishColor = System.Drawing.Color.FromArgb(255, finishColorPiker.SelectedColor.Value.R, finishColorPiker.SelectedColor.Value.G, finishColorPiker.SelectedColor.Value.B);
@@ -527,6 +635,9 @@ namespace Diploma
             logger.Add("");
         }
 
+        /// <summary>
+        /// Разложение TDMS файла на бинарные файлы
+        /// </summary>
         private void TDMS()
         {
             using (var fstream = new FileStream(tdmsPath, FileMode.Open))
@@ -655,9 +766,6 @@ namespace Diploma
                     fstream.Close();
                 }
             }
-
-            
-            //TDMS();
         }
 
         private void openBtn_Click(object sender, RoutedEventArgs e)
@@ -696,10 +804,10 @@ namespace Diploma
             var pointStart = imageBox.TranslatePoint(new System.Windows.Point(0,0),this);
             var pointFinish = new System.Windows.Point(imageBox.ActualWidth, imageBox.ActualHeight);
             var mousePoint = new System.Windows.Point(e.GetPosition(null).X, e.GetPosition(null).Y);
-            var xNew = (mousePoint.X - pointStart.X) / imageBox.ActualWidth;
+            var xNew = Math.Exp((mousePoint.X - pointStart.X) / imageBox.ActualWidth * Math.Log(maxFreq));
             var yNew = (mousePoint.Y - pointStart.Y) / imageBox.ActualHeight;
-            XLabel.Content = $"Частота: {Convert.ToInt32(xNew * maxFreq)} Гц";
-            YLabel.Content = $"Глубина: {Convert.ToInt32(yNew * (startPosition + lengthDepth))} метров";
+            XLabel.Content = $"Частота: {Convert.ToInt32(xNew)} Гц";
+            YLabel.Content = $"Глубина: {startPosition + Convert.ToInt32(yNew * (lengthDepth))} метров";
         }
 
         /// <summary>
@@ -711,26 +819,34 @@ namespace Diploma
         /// <returns>Цвет</returns>
         private System.Drawing.Color GetColors(double min, double max, double current)
         {
-            System.Drawing.Color color;
-            var help1 = max - min;
-            var help2 = current - min;
-            var help = help2 / help1;
-
-            if (current == -1.0)
-                return StartColor;
-
             //double hStart = StartColor.GetHue();
             //double hFinish = FinishColor.GetHue();
             //var h = hFinish - hStart;
             //h = h * help + min;
             //color = ColorFromHSV(h, 1, 1);
 
-            var dR = Convert.ToInt32(Math.Ceiling(help * (FinishColor.R - StartColor.R)));
-            var dG = Convert.ToInt32(Math.Ceiling(help * (FinishColor.G - StartColor.G)));
-            var dB = Convert.ToInt32(Math.Ceiling(help * (FinishColor.B - StartColor.B)));
-            color = System.Drawing.Color.FromArgb(dR + StartColor.R, dG + StartColor.G, dB + StartColor.B);
+            Color color1 = StartColor, color2 = FinishColor;
+            double MIN = min, MAX = max;
+            foreach (var item in colorData.ColorList)
+            {
+                if (current >= item.Start && current <=item.Finish)
+                {
+                    color1 = item.StartColor;
+                    if (current == -1.0)
+                        return color1;
+                    color2 = item.FinishColor;
+                    MIN = item.Start;
+                    MAX = item.Finish;
+                    break;
+                }
+            }
+            
+            var help = (current - MIN)/ (MAX - MIN);
 
-            return color;
+            var dR = Convert.ToInt32(Math.Ceiling(help * (color2.R - color1.R)));
+            var dG = Convert.ToInt32(Math.Ceiling(help * (color2.G - color1.G)));
+            var dB = Convert.ToInt32(Math.Ceiling(help * (color2.B - color1.B)));
+            return Color.FromArgb(dR + color1.R, dG + color1.G, dB + color1.B);
         }
     }
 }

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         mc:Ignorable="d"
-        Title="Спектральный анализ" Height="746" Width="1280" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Initialized="Window_Initialized">
+        Title="Спектральный анализ" Height="746" Width="1280" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Initialized="Window_Initialized" Closing="Window_Closing">
     <Grid>
         <Menu HorizontalAlignment="Left" Height="27" Margin="0,0,0,0" VerticalAlignment="Top" Width="1280">
             <MenuItem Header="Файл" Height="27" Width="47" HorizontalAlignment="Center">
@@ -22,7 +22,7 @@
         <GroupBox Header="Спектрограмма" HorizontalAlignment="Left" Height="683" Margin="10,27,0,0" VerticalAlignment="Top" Width="978">
             <Grid>
                 <Image x:Name="imageBox" Margin="10,10,16,220" MouseMove="imageBox_MouseMove"/>
-                <GroupBox Header="Управление визуализацией" HorizontalAlignment="Left" Height="205" Margin="10,446,0,0" VerticalAlignment="Top" Width="940" IsEnabled="False">
+                <GroupBox Header="Управление визуализацией" HorizontalAlignment="Left" Height="205" Margin="10,446,0,0" VerticalAlignment="Top" Width="940">
                     <Grid>
                         <GroupBox Header="Значения в точке" HorizontalAlignment="Left" Height="79" Margin="755,0,-2,0" VerticalAlignment="Top" Width="175">
                             <Grid>
@@ -30,16 +30,17 @@
                                 <Label x:Name="YLabel" Content="Глубина: "  HorizontalAlignment="Left" Margin="10,31,0,0" VerticalAlignment="Top" Height="26" Width="143"/>
                             </Grid>
                         </GroupBox>
-                        <GroupBox Header="Выделить зону" HorizontalAlignment="Left" Height="163" Margin="10,10,0,0" VerticalAlignment="Top" Width="175">
-                            <Grid>
+                        <GroupBox Header="Выделить зону" HorizontalAlignment="Left" Height="163" Margin="10,10,0,0" VerticalAlignment="Top" Width="174">
+                            <Grid Margin="0,0,-2,0">
                                 <Label Content="Частота:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
-                                <TextBox HorizontalAlignment="Left" Height="23" Margin="10,36,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="55"/>
-                                <TextBox HorizontalAlignment="Left" Height="23" Margin="98,36,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="55"/>
+                                <TextBox Name="xSBox" HorizontalAlignment="Left" Height="23" Margin="10,36,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="55"/>
+                                <TextBox Name="xFBox" HorizontalAlignment="Left" Height="23" Margin="98,36,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="55"/>
                                 <Label Content="-" HorizontalAlignment="Left" Margin="75,36,0,0" VerticalAlignment="Top" Height="23" Width="23"/>
-                                <Label Content="Глубина:" HorizontalAlignment="Left" Margin="10,82,0,0" VerticalAlignment="Top"/>
-                                <TextBox HorizontalAlignment="Left" Height="23" Margin="10,108,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="55"/>
-                                <TextBox HorizontalAlignment="Left" Height="23" Margin="98,108,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="55"/>
-                                <Label Content="-" HorizontalAlignment="Left" Margin="75,108,0,0" VerticalAlignment="Top" Height="23" Width="23"/>
+                                <Label Content="Глубина:" HorizontalAlignment="Left" Margin="10,64,0,0" VerticalAlignment="Top"/>
+                                <TextBox Name="ySBox" HorizontalAlignment="Left" Height="23" Margin="10,90,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="55"/>
+                                <TextBox Name="yFBox" HorizontalAlignment="Left" Height="23" Margin="98,90,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="55"/>
+                                <Label Content="-" HorizontalAlignment="Left" Margin="75,90,0,0" VerticalAlignment="Top" Height="23" Width="23"/>
+                                <Button Content="Выделить" Name="selectBtn" Click="selectBtn_Click" HorizontalAlignment="Left" Margin="10,118,0,0" VerticalAlignment="Top" Width="143"/>
                             </Grid>
                         </GroupBox>
                     </Grid>
@@ -48,30 +49,25 @@
         </GroupBox>
         <GroupBox Header="Управление обработкой данных" HorizontalAlignment="Left" Height="683" Margin="993,27,0,0" VerticalAlignment="Top" Width="271">
             <Grid>
-                <GroupBox Header="Обработка в заданном диапазоне" HorizontalAlignment="Left" Height="163" Margin="10,171,0,0" VerticalAlignment="Top" Width="239" IsEnabled="False">
+                <GroupBox Header="Диапазон глубины" HorizontalAlignment="Left" Height="63" Margin="10,235,0,0" VerticalAlignment="Top" Width="239" IsEnabled="False">
                     <Grid>
-                        <Label Content="Частота:" HorizontalAlignment="Left" Margin="10,5,0,0" VerticalAlignment="Top"/>
-                        <TextBox x:Name="frequencyStartBox" HorizontalAlignment="Left" Height="23" Margin="44,36,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="71"/>
-                        <TextBox x:Name="frequencyFinishBox" HorizontalAlignment="Left" Height="23" Margin="148,36,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="69"/>
-                        <Label Content="до" HorizontalAlignment="Left" Margin="120,36,0,0" VerticalAlignment="Top" Height="23" Width="23"/>
-                        <Label Content="От" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" Height="23" Width="34"/>
-                        <Label Content="Глубина:" HorizontalAlignment="Left" Margin="10,77,0,0" VerticalAlignment="Top"/>
-                        <TextBox x:Name="depthStartBox" HorizontalAlignment="Left" Height="23" Margin="44,108,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="71"/>
-                        <TextBox x:Name="depthFinishBox" HorizontalAlignment="Left" Height="23" Margin="148,108,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="69"/>
-                        <Label Content="до" HorizontalAlignment="Left" Margin="120,108,0,0" VerticalAlignment="Top" Height="23" Width="23"/>
-                        <Label Content="От" HorizontalAlignment="Left" Margin="10,108,0,0" VerticalAlignment="Top" Height="23" Width="34"/>
+                        <TextBox x:Name="depthStartBox" HorizontalAlignment="Left" Height="23" Margin="44,10,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="71"/>
+                        <TextBox x:Name="depthFinishBox" HorizontalAlignment="Left" Height="23" Margin="148,10,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="69"/>
+                        <Label Content="до" HorizontalAlignment="Left" Margin="120,10,0,0" VerticalAlignment="Top" Height="23" Width="23"/>
+                        <Label Content="От" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="23" Width="34"/>
                     </Grid>
                 </GroupBox>
                 <Button x:Name="startBtn" Content="Начать обработку" HorizontalAlignment="Left" Margin="10,0,0,5" Width="242" Height="42" VerticalAlignment="Bottom" Click="startBtn_Click"/>
                 <ProgressBar x:Name="progressBar" HorizontalAlignment="Left" Height="23" Margin="10,586,10,0" VerticalAlignment="Top" Width="239"/>
                 <Label Content="Процесс обработки:" HorizontalAlignment="Left" Margin="10,555,0,0" VerticalAlignment="Top"/>
-                <GroupBox Header="Цвета визуализации" HorizontalAlignment="Left" Height="156" Margin="10,10,0,0" VerticalAlignment="Top" Width="239">
-                    <Grid Margin="0,0,0,-12">
+                <GroupBox Header="Цвета визуализации" HorizontalAlignment="Left" Height="220" Margin="10,10,0,0" VerticalAlignment="Top" Width="239">
+                    <Grid Margin="0,0,0,3">
                         <Label Content="Начальный цвет:" Margin="10,10,88,0" Height="27" VerticalAlignment="Top"></Label>
                         <Label Content="Конечный цвет:" Margin="10,42,88,0" Height="26" VerticalAlignment="Top"></Label>
                         <xctk:ColorPicker x:Name="startColorPiker" SelectedColorChanged="startColorPiker_SelectedColorChanged" Margin="144,10,0,0" Height="27" VerticalAlignment="Top"/>
                         <xctk:ColorPicker x:Name="finishColorPiker" SelectedColorChanged="finishColorPiker_SelectedColorChanged" Margin="144,42,0,0" Height="26" VerticalAlignment="Top"/>
-                        <Button x:Name="addColorBtn" Content="Управление цветами визуализации" HorizontalAlignment="Left" Margin="10,73,0,0" VerticalAlignment="Top" Width="207" Height="53" IsCancel="True"/>
+                        <Button x:Name="addColorBtn" Content="Управление диапазонами цветов" HorizontalAlignment="Left" Margin="10,73,0,0" VerticalAlignment="Top" Width="207" Height="53" Click="addColorBtn_Click"/>
+                        <Button x:Name="Create_Img" Content="Построить спектрограмму" HorizontalAlignment="Left" Margin="10,131,0,0" VerticalAlignment="Top" Width="207" Height="53" Click="createImg_Click"/>
                     </Grid>
                 </GroupBox>
             </Grid>
