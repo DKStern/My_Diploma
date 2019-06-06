@@ -628,6 +628,220 @@ namespace Diploma
             ShowImg();
         }
 
+        private void saveBtn_Click(object sender, RoutedEventArgs e)
+        {
+            int offset = 300;
+            Bitmap b, bitmapNew;
+            using (var fs = new FileStream("Pic.png", FileMode.Open))
+                b = new Bitmap(fs);
+            bitmapNew = new Bitmap(b.Width + 2 * offset, b.Height + 2 * offset);
+
+            //Заглушка
+            startPosition = 130;
+            maxFreq = 10000.0;
+
+            for (int x = 0; x < b.Width; x++)
+                for (int y = 0; y < b.Height; y++)
+                {
+                    bitmapNew.SetPixel(x + offset, y + offset, b.GetPixel(x, y));
+                }
+
+            var yx = Convert.ToInt32(offset + b.Height + offset * 0.25);
+            List<int> helpList = new List<int>();
+            for (int i = 0; i < (int)(maxFreq / 1000); i++)
+                helpList.Add(Convert.ToInt32(Math.Log((i + 1) * 1000) * bufSize / Math.Log(maxFreq)));
+            List<int> helpList2 = new List<int>();
+            int value;
+            for (int i = 0; i < (int)(maxFreq / 100); i++)
+            {
+                value = Convert.ToInt32(Math.Log((i + 1) * 100) * bufSize / Math.Log(maxFreq));
+                if (value < b.Width * 0.9)
+                {
+                    helpList2.Add(value);
+                }
+                else
+                    break;
+            }
+            List<int> helpList3 = new List<int>();
+            for (int i = 0; i < (int)(maxFreq / 10); i++)
+            {
+                value = Convert.ToInt32(Math.Log((i + 1) * 10) * bufSize / Math.Log(maxFreq));
+                if (value < b.Width * 0.7)
+                {
+                    helpList3.Add(value);
+                }
+                else
+                    break;
+            }
+            List<int> helpList4 = new List<int>();
+            for (int i = 0; i < (int)(maxFreq); i++)
+            {
+                value = Convert.ToInt32(Math.Log((i + 1)) * bufSize / Math.Log(maxFreq));
+                if (value < b.Width * 0.25)
+                {
+                    helpList4.Add(value);
+                }
+                else
+                    break;
+            }
+
+
+            for (int x = offset; x <= b.Width + offset; x++)
+            {
+                bitmapNew.SetPixel(x, yx , Color.Black);
+                bitmapNew.SetPixel(x, yx + 1, Color.Black);
+                bitmapNew.SetPixel(x, yx + 2, Color.Black);
+                bitmapNew.SetPixel(x, yx + 3, Color.Black);
+                bitmapNew.SetPixel(x, yx + 4, Color.Black);
+
+                if (helpList.Count > 0)
+                    if (x - offset >= helpList[0])
+                    {
+                        DrawV(ref bitmapNew, yx, x, offset, 1000);
+                        helpList.Remove(helpList[0]);
+                    }
+                if (helpList2.Count > 0)
+                    if (x - offset >= helpList2[0])
+                    {
+                        DrawV(ref bitmapNew, yx, x, offset, 100);
+                        helpList2.Remove(helpList2[0]);
+                    }
+                if (helpList3.Count > 0)
+                    if (x-offset>=helpList3[0])
+                    {
+                        DrawV(ref bitmapNew, yx, x, offset, 10);
+                        helpList3.Remove(helpList3[0]);
+                    }
+                if (helpList4.Count > 0)
+                    if (x - offset >= helpList4[0])
+                    {
+                        DrawV(ref bitmapNew, yx, x, offset);
+                        helpList4.Remove(helpList4[0]);
+                    }
+            }
+
+            var xy = Convert.ToInt32(offset * 0.75);
+            for (int y = offset; y <= b.Height + offset; y++)
+            {
+                bitmapNew.SetPixel(xy, y, Color.Black);
+                bitmapNew.SetPixel(xy + 1, y, Color.Black);
+                bitmapNew.SetPixel(xy + 2, y, Color.Black);
+                bitmapNew.SetPixel(xy + 3, y, Color.Black);
+                bitmapNew.SetPixel(xy + 4, y, Color.Black);
+
+                if ((y + startPosition) % 100 == 0)
+                {
+                    DrawH(ref bitmapNew, y, xy, offset, 100);
+                }
+                else if ((y + startPosition) % 10 == 0)
+                {
+                    DrawH(ref bitmapNew, y, xy, offset);
+                }
+            }
+
+            bitmapNew.Save("New.png");
+            bitmapNew.Dispose();
+        }
+
+        /// <summary>
+        /// Отрисовка горизонтальных шкал
+        /// </summary>
+        /// <param name="bitmap">Изображение, на котором нужны шкалы</param>
+        /// <param name="y">Координата Y</param>
+        /// <param name="xy">Координата X</param>
+        /// <param name="offset">Отступ</param>
+        /// <param name="type">Шаг</param>
+        private void DrawH(ref Bitmap bitmap, int y, int xy,int offset, int type = 10)
+        {
+            switch (type)
+            {
+                case 10:
+                    {
+                        int help = Convert.ToInt32(0.1 * offset);
+                        for (int x = xy - help; x < xy + help; x++)
+                        {
+                            bitmap.SetPixel(x, y - 1, Color.Black);
+                            bitmap.SetPixel(x, y, Color.Black);
+                            bitmap.SetPixel(x, y + 1, Color.Black);
+                        }
+                        
+                        break;
+                    }
+                case 100:
+                    {
+                        int help = Convert.ToInt32(0.15 * offset);
+                        for (int x = xy - help; x < xy + help; x++)
+                        {
+                            bitmap.SetPixel(x, y - 2, Color.Black);
+                            bitmap.SetPixel(x, y - 1, Color.Black);
+                            bitmap.SetPixel(x, y, Color.Black);
+                            bitmap.SetPixel(x, y + 1, Color.Black);
+                            bitmap.SetPixel(x, y + 2, Color.Black);
+                        }
+                        break;
+                    }
+            }
+        }
+
+        private void DrawV(ref Bitmap bitmap, int yx, int x, int offset, int type = 1)
+        {
+            switch (type)
+            {
+                case 1:
+                    {
+                        int help = Convert.ToInt32(0.05 * offset);
+                        for (int y = yx - help; y < yx + help; y++)
+                        {
+                            bitmap.SetPixel(x - 1, y, Color.Black);
+                            bitmap.SetPixel(x, y, Color.Black);
+                            bitmap.SetPixel(x + 1, y, Color.Black);
+                        }
+
+                        break;
+                    }
+                case 10:
+                    {
+                        int help = Convert.ToInt32(0.1 * offset);
+                        for (int y = yx - help; y < yx + help; y++)
+                        {
+                            bitmap.SetPixel(x - 1, y, Color.Black);
+                            bitmap.SetPixel(x, y, Color.Black);
+                            bitmap.SetPixel(x + 1, y, Color.Black);
+                        }
+
+                        break;
+                    }
+                case 100:
+                    {
+                        int help = Convert.ToInt32(0.15 * offset);
+                        for (int y = yx - help; y < yx + help; y++)
+                        {
+                            bitmap.SetPixel(x - 2, y, Color.Black);
+                            bitmap.SetPixel(x - 1, y, Color.Black);
+                            bitmap.SetPixel(x, y, Color.Black);
+                            bitmap.SetPixel(x + 1, y, Color.Black);
+                            bitmap.SetPixel(x + 2, y, Color.Black);
+                        }
+                        break;
+                    }
+                case 1000:
+                    {
+                        int help = Convert.ToInt32(0.2 * offset);
+                        for (int y = yx - help; y < yx + help; y++)
+                        {
+                            bitmap.SetPixel(x - 3, y, Color.Black);
+                            bitmap.SetPixel(x - 2, y, Color.Black);
+                            bitmap.SetPixel(x - 1, y, Color.Black);
+                            bitmap.SetPixel(x, y, Color.Black);
+                            bitmap.SetPixel(x + 1, y, Color.Black);
+                            bitmap.SetPixel(x + 2, y, Color.Black);
+                            bitmap.SetPixel(x + 3, y, Color.Black);
+                        }
+                        break;
+                    }
+            }
+        }
+
         private void finishColorPiker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e)
         {
             FinishColor = System.Drawing.Color.FromArgb(255, finishColorPiker.SelectedColor.Value.R, finishColorPiker.SelectedColor.Value.G, finishColorPiker.SelectedColor.Value.B);
@@ -688,7 +902,7 @@ namespace Diploma
             {
                 tdmsPath = dialog.FileName;
             }
-            if (path != "")
+            if (path != "" && path != null)
             {
                 using (FileStream fstream = new FileStream(tdmsPath, FileMode.Open))
                 {

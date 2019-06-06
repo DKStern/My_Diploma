@@ -12,7 +12,7 @@
                 <MenuItem x:Name="createImg" Header="Создать спектрограмму" Click="createImg_Click"></MenuItem>
                 <MenuItem x:Name="openBtn" Header="Открыть данные" Click="openBtn_Click"></MenuItem>
                 <MenuItem x:Name="openTDMS" Header="Преобразовать TDMS файл" Click="openTDMS_Click"/>
-                <MenuItem x:Name="saveBtn" Header="Сохранить"></MenuItem>
+                <MenuItem x:Name="saveBtn" Header="Сохранить" Click="saveBtn_Click"/>
                 <MenuItem x:Name="exitBtn" Header="Выход" Click="exitBtn_Click"></MenuItem>
             </MenuItem>
             <MenuItem Header="Логи" Height="27" Width="47" HorizontalAlignment="Center">
