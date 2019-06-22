@@ -51,8 +51,6 @@ C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\MainWindow.
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\App.g.cs
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma_MarkupCompile.cache
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.g.resources
-C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.Properties.Resources.resources
-C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csproj.GenerateResource.cache
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csproj.CoreCompileInputs.cache
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csproj.CopyComplete
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.exe
@@ -66,4 +64,6 @@ C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\bin\Debug\ManagedCuda
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Forms\ColorPicker.g.cs
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma_MarkupCompile.lref
 C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Forms\ColorPicker.baml
-C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csprojAssemblyReference.cache
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.Numbers.resources
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csproj.GenerateResource.cache
+C:\Users\Ermol\Documents\GitHub\My_Diploma\Diploma\Diploma\obj\Debug\Diploma.csprojResolveAssemblyReference.cache

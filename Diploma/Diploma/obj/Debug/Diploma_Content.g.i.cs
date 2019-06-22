@@ -8,6 +8,15 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("tdmsreader.dll")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/0.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/1.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/2.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/3.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/4.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/5.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/6.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/7.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/8.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("numbers/9.png")]
 
 

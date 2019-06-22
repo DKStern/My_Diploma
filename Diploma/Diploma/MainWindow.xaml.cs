@@ -13,8 +13,6 @@ using ManagedCuda.VectorTypes;
 using ManagedCuda.CudaFFT;
 using Diploma.Classes;
 using Diploma.Forms;
-using System.Runtime.InteropServices;
-using System.Drawing.Imaging;
 
 namespace Diploma
 {
@@ -34,6 +32,8 @@ namespace Diploma
         private bool isRequested = true, isReady = false;
         private string logPath;
         private long nfft;
+        private int offset = 300; //Offset for Scales
+        private Bitmap[] numbers = new Bitmap[10];
 
         public MainWindow()
         {
@@ -54,6 +54,21 @@ namespace Diploma
             FinishColor = Color.FromArgb(255, 133, 8, 8);
             startColorPiker.SelectedColor = GetColor(95, 255, 197);
             finishColorPiker.SelectedColor = GetColor(133, 8, 8);
+            MakeNumbers();
+        }
+
+        private void MakeNumbers()
+        {
+            numbers[0] = new Bitmap(Numbers._0);
+            numbers[1] = new Bitmap(Numbers._1);
+            numbers[2] = new Bitmap(Numbers._2);
+            numbers[3] = new Bitmap(Numbers._3);
+            numbers[4] = new Bitmap(Numbers._4);
+            numbers[5] = new Bitmap(Numbers._5);
+            numbers[6] = new Bitmap(Numbers._6);
+            numbers[7] = new Bitmap(Numbers._7);
+            numbers[8] = new Bitmap(Numbers._8);
+            numbers[9] = new Bitmap(Numbers._9);
         }
 
         /// <summary>
@@ -93,6 +108,7 @@ namespace Diploma
             string[] str;
             int count = 0;
             int len = 0;
+            string line;
             Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
             dialog.Title = "Выбор файла спектрограммы";
             dialog.Filter = "txt file (*.txt)|*.txt";
@@ -106,14 +122,13 @@ namespace Diploma
                     logger.Add("ВИЗУАЛИЗАТОР >> Нахождение диапозона значения энергии...");
                     var st = new Stopwatch();
                     st.Start();
-                    string line;
                     str = sr.ReadLine().Split(' ');
                     startPosition = Int32.Parse(str[0]);
                     lengthDepth = Int32.Parse(str[1]);
                     depthStartBox.Text = str[0];
                     depthFinishBox.Text = $"{startPosition + lengthDepth}";
                     str = sr.ReadLine().Split(' ');
-                    nfft = Int64.Parse(str[0]);
+                    nfft = Int64.Parse(str[0]); //возможно лишнее
                     maxFreq = Int32.Parse(str[1]);
 
                     while ((line = sr.ReadLine()) != null)
@@ -141,17 +156,18 @@ namespace Diploma
                     logger.Add($"ВИЗУАЛИЗАТОР >> Диапазон найден: от {min} до {max}");
                     logger.Add($"ВИЗУАЛИЗАТОР >> Нахождение заняло: {st.Elapsed}");
                 }
-                heigth = count;
-                width = len;
+
+                heigth = count + 2 * offset;
+                width = len + 2 * offset;
                 Bitmap bmp = new Bitmap(width, heigth);
-                int y = 0;
                 using (var sr = new StreamReader(sPath))
                 {
                     logger.Add("ВИЗУАЛИЗАТОР >> Создание изображения из файла...");
                     var st = new Stopwatch();
                     st.Start();
-                    string line = sr.ReadLine();
                     sr.ReadLine();
+                    sr.ReadLine();
+                    int y = 0;
                     while ((line = sr.ReadLine()) != null)
                     {
                         if (line[line.Length - 1] == ' ')
@@ -160,22 +176,127 @@ namespace Diploma
                         for (int x = 0; x < str.Length; x++)
                         {
                             color = GetColors(min, max, Convert.ToDouble(str[x]));
-                            bmp.SetPixel(x, y, color);
+                            bmp.SetPixel(x + offset, y + offset, color);
                         }
                         y++;
                     }
+
+                    //Добавление шкал
+                    var yx = Convert.ToInt32(bmp.Height - offset * 0.75);
+                    List<int> helpList = new List<int>();
+                    for (int i = 0; i < (int)(maxFreq / 1000); i++)
+                        helpList.Add(Convert.ToInt32(Math.Log((i + 1) * 1000) * bufSize / Math.Log(maxFreq)));
+                    List<int> helpList2 = new List<int>();
+                    int value;
+                    for (int i = 0; i < (int)(maxFreq / 100); i++)
+                    {
+                        value = Convert.ToInt32(Math.Log((i + 1) * 100) * bufSize / Math.Log(maxFreq));
+                        if (value < (bmp.Width - 2 * offset) * 0.8)
+                        {
+                            helpList2.Add(value);
+                        }
+                        else
+                            break;
+                    }
+                    List<int> helpList3 = new List<int>();
+                    for (int i = 0; i < (int)(maxFreq / 10); i++)
+                    {
+                        value = Convert.ToInt32(Math.Log((i + 1) * 10) * bufSize / Math.Log(maxFreq));
+                        if (value < (bmp.Width - 2 * offset) * 0.55)
+                        {
+                            helpList3.Add(value);
+                        }
+                        else
+                            break;
+                    }
+                    List<int> helpList4 = new List<int>();
+                    for (int i = 0; i < (int)(maxFreq); i++)
+                    {
+                        value = Convert.ToInt32(Math.Log((i + 1)) * bufSize / Math.Log(maxFreq));
+                        if (value < (bmp.Width - 2 * offset) * 0.25)
+                        {
+                            helpList4.Add(value);
+                        }
+                        else
+                            break;
+                    }
+
+                    bool b = true;
+                    for (int x = bmp.Width - offset; x >= offset; x--)
+                    {
+                        bmp.SetPixel(x, yx, Color.Black);
+                        bmp.SetPixel(x, yx + 1, Color.Black);
+                        bmp.SetPixel(x, yx + 2, Color.Black);
+                        bmp.SetPixel(x, yx + 3, Color.Black);
+                        bmp.SetPixel(x, yx + 4, Color.Black);
+
+                        b = true;
+                        if (helpList.Count > 0)
+                            if (x - offset <= helpList[helpList.Count-1])
+                            {
+                                DrawV(ref bmp, yx, x, offset, 1000, helpList.Count * 1000, b);
+                                helpList.Remove(helpList[helpList.Count - 1]);
+                                b = false;
+                            }
+                        if (helpList2.Count > 0)
+                            if (x - offset <= helpList2[helpList2.Count - 1])
+                            {
+
+                                DrawV(ref bmp, yx, x, offset, 100, helpList2.Count * 100, b);
+                                helpList2.Remove(helpList2[helpList2.Count - 1]);
+                                b = false;
+                            }
+                        if (helpList3.Count > 0)
+                            if (x - offset <= helpList3[helpList3.Count - 1])
+                            {
+                                DrawV(ref bmp, yx, x, offset, 10, helpList3.Count * 10, b);
+                                helpList3.Remove(helpList3[helpList3.Count - 1]);
+                                b = false;
+                            }
+                        if (helpList4.Count > 0)
+                            if (x - offset <= helpList4[helpList4.Count - 1])
+                            {
+                                DrawV(ref bmp, yx, x, offset, 1, helpList4.Count, b);
+                                helpList4.Remove(helpList4[helpList4.Count - 1]);
+                                b = false;
+                            }
+                    }
+
+                    var xy = Convert.ToInt32(offset * 0.75);
+                    int of;
+                    for (int yy = offset; yy <= bmp.Height - offset; yy++)
+                    {
+                        bmp.SetPixel(xy, yy, Color.Black);
+                        bmp.SetPixel(xy + 1, yy, Color.Black);
+                        bmp.SetPixel(xy + 2, yy, Color.Black);
+                        bmp.SetPixel(xy + 3, yy, Color.Black);
+                        bmp.SetPixel(xy + 4, yy, Color.Black);
+
+                        of = yy - offset + startPosition;
+                        if ((of) % 100 == 0)
+                        {
+                            DrawH(ref bmp, yy, xy, offset, 100, of);
+                        }
+                        else if ((of) % 10 == 0)
+                        {
+                            DrawH(ref bmp, yy, xy, offset, 10, of);
+                        }
+                    }
+
+
                     st.Stop();
                     logger.Add("ВИЗУАЛИЗАТОР >> Изображение создано");
                     logger.Add($"ВИЗУАЛИЗАТОР >> Создание изображения заняло: {st.Elapsed}");
                 }
 
-                bmp.Save("Pic.png");
+                bmp.Save($"{logPath}\\Pic.png");
                 bmp.Dispose();
                 watch.Stop();
                 logger.Add("ВИЗУАЛИЗАТОР >> Изображение сохранено: Pic.png");
                 ShowImg();
                 logger.Add($"ВИЗУАЛИЗАТОР >> Визуализация заняла: {watch.Elapsed}");
                 logger.Add("");
+                logger.Flush();
                 GC.Collect(1, GCCollectionMode.Forced);
                 GC.WaitForPendingFinalizers();
             }
@@ -322,7 +443,7 @@ namespace Diploma
             int[] numbers;
             int index;
             bool firstTime = true;
-            string Path = $"Output {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
+            string Path = $"{logPath}\\Output {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
             StreamWriter sw = new StreamWriter(Path, true);
             sw.WriteLine($"{startPosition} {lengthDepth}");
 
@@ -419,7 +540,7 @@ namespace Diploma
                     progressBar.Value++;
                     stopwatch.Stop();
                     logger.Add($"ПОТОК ОБРАБОТКИ ДАННЫХ >> Вычисление {counter++} дорожки заняло: {stopwatch.Elapsed.ToString()}");
-                    //logger.Add("");
+                    logger.Flush();
                 }
 
                 if (readTask.Status == TaskStatus.RanToCompletion && !isReady)
@@ -460,36 +581,11 @@ namespace Diploma
         {
             BitmapImage bm1 = new BitmapImage();
             bm1.BeginInit();
-            bm1.UriSource = new Uri("Pic.png", UriKind.Relative);
+            bm1.UriSource = new Uri($"{logPath}\\Pic.png", UriKind.Relative);
             bm1.CacheOption = BitmapCacheOption.OnLoad;
             bm1.EndInit();
             bitmap = new WriteableBitmap(bm1);
             imageBox.Source = bitmap;
-        }
-
-        private static System.Drawing.Color ColorFromHSV(double hue, double saturation, double value)
-        {
-            int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
-            double f = hue / 60 - Math.Floor(hue / 60);
-
-            value = value * 255;
-            int v = Convert.ToInt32(value);
-            int p = Convert.ToInt32(value * (1 - saturation));
-            int q = Convert.ToInt32(value * (1 - f * saturation));
-            int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
-
-            if (hi == 0)
-                return System.Drawing.Color.FromArgb(255, v, t, p);
-            else if (hi == 1)
-                return System.Drawing.Color.FromArgb(255, q, v, p);
-            else if (hi == 2)
-                return System.Drawing.Color.FromArgb(255, p, v, t);
-            else if (hi == 3)
-                return System.Drawing.Color.FromArgb(255, p, q, v);
-            else if (hi == 4)
-                return System.Drawing.Color.FromArgb(255, t, p, v);
-            else
-                return System.Drawing.Color.FromArgb(255, v, p, q);
         }
 
         private void startColorPiker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e)
@@ -547,7 +643,7 @@ namespace Diploma
         }
 
         /// <summary>
-        /// Возращает затемнённую версию цвета
+        /// Выделение зоны
         /// </summary>
         /// <param name="color">Цвет</param>
         /// <returns>Затемнённая версия</returns>
@@ -555,7 +651,7 @@ namespace Diploma
         {
             double r, g, b;
             double H = color.GetHue(), S = color.GetSaturation(), V = color.GetBrightness();
-            V -= 0.25;
+            S -= 0.25;
             if (V < 0)
                 V = 0;
             var C = V * S;
@@ -630,128 +726,33 @@ namespace Diploma
 
         private void saveBtn_Click(object sender, RoutedEventArgs e)
         {
-            int offset = 300;
-            Bitmap b, bitmapNew;
-            using (var fs = new FileStream("Pic.png", FileMode.Open))
-                b = new Bitmap(fs);
-            bitmapNew = new Bitmap(b.Width + 2 * offset, b.Height + 2 * offset);
-
-            //Заглушка
-            startPosition = 130;
-            maxFreq = 10000.0;
-
-            for (int x = 0; x < b.Width; x++)
-                for (int y = 0; y < b.Height; y++)
-                {
-                    bitmapNew.SetPixel(x + offset, y + offset, b.GetPixel(x, y));
-                }
-
-            var yx = Convert.ToInt32(offset + b.Height + offset * 0.25);
-            List<int> helpList = new List<int>();
-            for (int i = 0; i < (int)(maxFreq / 1000); i++)
-                helpList.Add(Convert.ToInt32(Math.Log((i + 1) * 1000) * bufSize / Math.Log(maxFreq)));
-            List<int> helpList2 = new List<int>();
-            int value;
-            for (int i = 0; i < (int)(maxFreq / 100); i++)
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "PNG file (*.png)|*.png";
+            saveFileDialog.Title = "Сохранение спектрограммы";
+            if (File.Exists($"{logPath}\\Pic.png"))
             {
-                value = Convert.ToInt32(Math.Log((i + 1) * 100) * bufSize / Math.Log(maxFreq));
-                if (value < b.Width * 0.9)
+                if (saveFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
-                    helpList2.Add(value);
-                }
-                else
-                    break;
-            }
-            List<int> helpList3 = new List<int>();
-            for (int i = 0; i < (int)(maxFreq / 10); i++)
-            {
-                value = Convert.ToInt32(Math.Log((i + 1) * 10) * bufSize / Math.Log(maxFreq));
-                if (value < b.Width * 0.7)
-                {
-                    helpList3.Add(value);
-                }
-                else
-                    break;
-            }
-            List<int> helpList4 = new List<int>();
-            for (int i = 0; i < (int)(maxFreq); i++)
-            {
-                value = Convert.ToInt32(Math.Log((i + 1)) * bufSize / Math.Log(maxFreq));
-                if (value < b.Width * 0.25)
-                {
-                    helpList4.Add(value);
-                }
-                else
-                    break;
-            }
-
-
-            for (int x = offset; x <= b.Width + offset; x++)
-            {
-                bitmapNew.SetPixel(x, yx , Color.Black);
-                bitmapNew.SetPixel(x, yx + 1, Color.Black);
-                bitmapNew.SetPixel(x, yx + 2, Color.Black);
-                bitmapNew.SetPixel(x, yx + 3, Color.Black);
-                bitmapNew.SetPixel(x, yx + 4, Color.Black);
-
-                if (helpList.Count > 0)
-                    if (x - offset >= helpList[0])
-                    {
-                        DrawV(ref bitmapNew, yx, x, offset, 1000);
-                        helpList.Remove(helpList[0]);
-                    }
-                if (helpList2.Count > 0)
-                    if (x - offset >= helpList2[0])
-                    {
-                        DrawV(ref bitmapNew, yx, x, offset, 100);
-                        helpList2.Remove(helpList2[0]);
-                    }
-                if (helpList3.Count > 0)
-                    if (x-offset>=helpList3[0])
-                    {
-                        DrawV(ref bitmapNew, yx, x, offset, 10);
-                        helpList3.Remove(helpList3[0]);
-                    }
-                if (helpList4.Count > 0)
-                    if (x - offset >= helpList4[0])
-                    {
-                        DrawV(ref bitmapNew, yx, x, offset);
-                        helpList4.Remove(helpList4[0]);
-                    }
-            }
-
-            var xy = Convert.ToInt32(offset * 0.75);
-            for (int y = offset; y <= b.Height + offset; y++)
-            {
-                bitmapNew.SetPixel(xy, y, Color.Black);
-                bitmapNew.SetPixel(xy + 1, y, Color.Black);
-                bitmapNew.SetPixel(xy + 2, y, Color.Black);
-                bitmapNew.SetPixel(xy + 3, y, Color.Black);
-                bitmapNew.SetPixel(xy + 4, y, Color.Black);
-
-                if ((y + startPosition) % 100 == 0)
-                {
-                    DrawH(ref bitmapNew, y, xy, offset, 100);
-                }
-                else if ((y + startPosition) % 10 == 0)
-                {
-                    DrawH(ref bitmapNew, y, xy, offset);
+                    var path = saveFileDialog.FileName;
+                    File.Copy($"{logPath}\\Pic.png", $"{path}");
                 }
             }
-
-            bitmapNew.Save("New.png");
-            bitmapNew.Dispose();
+            else
+            {
+                System.Windows.MessageBox.Show("Нет данных для сохранения!");
+            }
         }
 
         /// <summary>
-        /// Отрисовка горизонтальных шкал
+        /// Отрисовка горизонтальных делений
         /// </summary>
         /// <param name="bitmap">Изображение, на котором нужны шкалы</param>
         /// <param name="y">Координата Y</param>
         /// <param name="xy">Координата X</param>
         /// <param name="offset">Отступ</param>
         /// <param name="type">Шаг</param>
-        private void DrawH(ref Bitmap bitmap, int y, int xy,int offset, int type = 10)
+        /// <param name="number">Число</param>
+        private void DrawH(ref Bitmap bitmap, int y, int xy,int offset, int type, int number)
         {
             switch (type)
             {
@@ -778,12 +779,38 @@ namespace Diploma
                             bitmap.SetPixel(x, y + 1, Color.Black);
                             bitmap.SetPixel(x, y + 2, Color.Black);
                         }
+
+                        int num, ofX = xy - help - 7, ofY = y, sizeX, sizeY;
+                        while (number > 0)
+                        {
+                            num = number % 10;
+                            number /= 10;
+                            sizeX = numbers[num].Width;
+                            sizeY = numbers[num].Height;
+                            ofX = ofX - sizeX - 3;
+                            ofY = y - sizeY / 2;
+                            for (int i = ofX; i < ofX + sizeX; i++)
+                                for (int j = ofY; j < ofY + sizeY; j++)
+                                {
+                                    bitmap.SetPixel(i, j, numbers[num].GetPixel(i - ofX, j - ofY));
+                                }
+                        }
+
                         break;
                     }
             }
         }
 
-        private void DrawV(ref Bitmap bitmap, int yx, int x, int offset, int type = 1)
+        /// <summary>
+        /// Отрисовка вертикальных делений
+        /// </summary>
+        /// <param name="bitmap">Изображение, на котором нужны шкалы</param>
+        /// <param name="yx">Координата Y</param>
+        /// <param name="x">Координата X</param>
+        /// <param name="offset">Отступ</param>
+        /// <param name="type">Шаг</param>
+        /// <param name="number">Чисдл</param>
+        private void DrawV(ref Bitmap bitmap, int yx, int x, int offset, int type, int number, bool isNeeded)
         {
             switch (type)
             {
@@ -797,6 +824,32 @@ namespace Diploma
                             bitmap.SetPixel(x + 1, y, Color.Black);
                         }
 
+                        if (isNeeded)
+                        {
+                            int w = number, edd = 0;
+                            while (w > 0)
+                            {
+                                edd++;
+                                w /= 10;
+                            }
+                            int num, ofX = x, ofY = yx + help + 5, sizeX, sizeY;
+                            while (number > 0)
+                            {
+                                num = number % 10;
+                                number /= 10;
+                                sizeX = numbers[num].Width;
+                                sizeY = numbers[num].Height;
+                                ofX = x - sizeX / 2;
+                                ofY = yx + help + 5 + edd * (sizeY + 3);
+                                for (int i = ofX; i < ofX + sizeX; i++)
+                                    for (int j = ofY; j < ofY + sizeY; j++)
+                                    {
+                                        bitmap.SetPixel(i, j, numbers[num].GetPixel(i - ofX, j - ofY));
+                                    }
+                                edd--;
+                            }
+                        }
+
                         break;
                     }
                 case 10:
@@ -807,6 +860,32 @@ namespace Diploma
                             bitmap.SetPixel(x - 1, y, Color.Black);
                             bitmap.SetPixel(x, y, Color.Black);
                             bitmap.SetPixel(x + 1, y, Color.Black);
+                        }
+
+                        if (isNeeded)
+                        {
+                            int w = number, edd = 0;
+                            while (w > 0)
+                            {
+                                edd++;
+                                w /= 10;
+                            }
+                            int num, ofX = x, ofY = yx + help + 5, sizeX, sizeY;
+                            while (number > 0)
+                            {
+                                num = number % 10;
+                                number /= 10;
+                                sizeX = numbers[num].Width;
+                                sizeY = numbers[num].Height;
+                                ofX = x - sizeX / 2;
+                                ofY = yx + help + 5 + edd * (sizeY + 3);
+                                for (int i = ofX; i < ofX + sizeX; i++)
+                                    for (int j = ofY; j < ofY + sizeY; j++)
+                                    {
+                                        bitmap.SetPixel(i, j, numbers[num].GetPixel(i - ofX, j - ofY));
+                                    }
+                                edd--;
+                            }
                         }
 
                         break;
@@ -822,6 +901,33 @@ namespace Diploma
                             bitmap.SetPixel(x + 1, y, Color.Black);
                             bitmap.SetPixel(x + 2, y, Color.Black);
                         }
+
+                        if (isNeeded)
+                        {
+                            int w = number, edd = 0;
+                            while (w > 0)
+                            {
+                                edd++;
+                                w /= 10;
+                            }
+                            int num, ofX = x, ofY = yx + help + 5, sizeX, sizeY;
+                            while (number > 0)
+                            {
+                                num = number % 10;
+                                number /= 10;
+                                sizeX = numbers[num].Width;
+                                sizeY = numbers[num].Height;
+                                ofX = x - sizeX / 2;
+                                ofY = yx + help + 5 + edd * (sizeY + 3);
+                                for (int i = ofX; i < ofX + sizeX; i++)
+                                    for (int j = ofY; j < ofY + sizeY; j++)
+                                    {
+                                        bitmap.SetPixel(i, j, numbers[num].GetPixel(i - ofX, j - ofY));
+                                    }
+                                edd--;
+                            }
+                        }
+
                         break;
                     }
                 case 1000:
@@ -837,6 +943,30 @@ namespace Diploma
                             bitmap.SetPixel(x + 2, y, Color.Black);
                             bitmap.SetPixel(x + 3, y, Color.Black);
                         }
+
+                        int w = number, edd = 0;
+                        while (w > 0)
+                        {
+                            edd++;
+                            w /= 10;
+                        }
+                        int num, ofX = x, ofY = yx + help + 5, sizeX, sizeY;
+                        while (number > 0)
+                        {
+                            num = number % 10;
+                            number /= 10;
+                            sizeX = numbers[num].Width;
+                            sizeY = numbers[num].Height;
+                            ofX = x - sizeX / 2;
+                            ofY = yx + help + 5 + edd * (sizeY + 3);
+                            for (int i = ofX; i < ofX + sizeX; i++)
+                                for (int j = ofY; j < ofY + sizeY; j++)
+                                {
+                                    bitmap.SetPixel(i, j, numbers[num].GetPixel(i - ofX, j - ofY));
+                                }
+                            edd--;
+                        }
+
                         break;
                     }
             }
@@ -1015,13 +1145,26 @@ namespace Diploma
 
         private void imageBox_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
+            var offsetH = (double)offset / (bufSize + 2 * offset);
             var pointStart = imageBox.TranslatePoint(new System.Windows.Point(0,0),this);
-            var pointFinish = new System.Windows.Point(imageBox.ActualWidth, imageBox.ActualHeight);
             var mousePoint = new System.Windows.Point(e.GetPosition(null).X, e.GetPosition(null).Y);
-            var xNew = Math.Exp((mousePoint.X - pointStart.X) / imageBox.ActualWidth * Math.Log(maxFreq));
+            var xNew = (mousePoint.X - pointStart.X) / imageBox.ActualWidth;
             var yNew = (mousePoint.Y - pointStart.Y) / imageBox.ActualHeight;
-            XLabel.Content = $"Частота: {Convert.ToInt32(xNew)} Гц";
-            YLabel.Content = $"Глубина: {startPosition + Convert.ToInt32(yNew * (lengthDepth))} метров";
+            if (xNew > offsetH && xNew < 1 - offsetH)
+            {
+                xNew = Math.Exp((mousePoint.X - pointStart.X - imageBox.ActualWidth * offsetH) / (imageBox.ActualWidth * (1 - 2 * offsetH)) * Math.Log(maxFreq));
+                XLabel.Content = $"Частота: {Convert.ToInt32(xNew)} Гц";
+            }
+            else
+                XLabel.Content = $"Частота: не наведено";
+            var offsetV = (double)offset / (lengthDepth + 2 * offset);
+            if (yNew > offsetV && yNew < 1 - offsetV)
+            {
+                yNew = (mousePoint.Y - pointStart.Y - imageBox.ActualHeight * offsetV) / (imageBox.ActualHeight * (1 - 2 * offsetV));
+                YLabel.Content = $"Глубина: {startPosition + Convert.ToInt32(yNew * (lengthDepth))} метров";
+            }
+            else
+                YLabel.Content = $"Глубина: не наведено";
         }
 
         /// <summary>
@@ -1031,7 +1174,7 @@ namespace Diploma
         /// <param name="max">Максимальное значение</param>
         /// <param name="current">Текущее значение</param>
         /// <returns>Цвет</returns>
-        private System.Drawing.Color GetColors(double min, double max, double current)
+        private Color GetColors(double min, double max, double current)
         {
             //double hStart = StartColor.GetHue();
             //double hFinish = FinishColor.GetHue();
