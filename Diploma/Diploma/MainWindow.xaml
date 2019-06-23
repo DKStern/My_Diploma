@@ -16,7 +16,7 @@
                 <MenuItem x:Name="createImg" Header="Создать спектрограмму" Click="createImg_Click"></MenuItem>
                 <MenuItem x:Name="openBtn" Header="Открыть данные" Click="openBtn_Click"></MenuItem>
                 <MenuItem x:Name="openTDMS" Header="Преобразовать TDMS файл" Click="openTDMS_Click"/>
-                <MenuItem x:Name="saveBtn" Header="Сохранить" Click="saveBtn_Click"/>
+                <MenuItem x:Name="saveBtn" Header="Сохранить спектрограмму" Click="saveBtn_Click" IsEnabled="False"/>
                 <MenuItem x:Name="exitBtn" Header="Выход" Click="exitBtn_Click"></MenuItem>
             </MenuItem>
         </Menu>
@@ -31,7 +31,7 @@
                                 <Label x:Name="YLabel" Content="Глубина: "  HorizontalAlignment="Left" Margin="10,31,0,0" VerticalAlignment="Top" Height="26" Width="143"/>
                             </Grid>
                         </GroupBox>
-                        <GroupBox Header="Выделить зону" HorizontalAlignment="Left" Margin="10,1,0,10" Width="482">
+                        <GroupBox x:Name="selectBox" Header="Выделить зону" HorizontalAlignment="Left" Margin="10,1,0,10" Width="482" IsEnabled="False">
                             <Grid Margin="0,0,-2,0">
                                 <Label Content="Частота:" HorizontalAlignment="Left" Margin="8,2,0,33"/>
                                 <TextBox Name="xSBox" HorizontalAlignment="Left" Height="23" Margin="8,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55" TextChanged="xSBox_TextChanged"/>
@@ -58,7 +58,7 @@
                         <Label Content="От" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="23" Width="34"/>
                     </Grid>
                 </GroupBox>
-                <Button x:Name="startBtn" Content="Начать обработку" HorizontalAlignment="Left" Margin="10,0,0,5" Width="242" Height="42" VerticalAlignment="Bottom" Click="startBtn_Click"/>
+                <Button x:Name="startBtn" Content="Начать обработку" HorizontalAlignment="Left" Margin="10,0,0,5" Width="242" Height="42" VerticalAlignment="Bottom" Click="startBtn_Click" IsEnabled="False"/>
                 <ProgressBar x:Name="progressBar" HorizontalAlignment="Left" Margin="10,0,0,52" Width="239" Height="23" VerticalAlignment="Bottom"/>
                 <Label Content="Процесс обработки:" HorizontalAlignment="Left" Margin="10,0,0,80" Height="26" VerticalAlignment="Bottom"/>
                 <GroupBox Header="Цвета визуализации" HorizontalAlignment="Left" Height="220" Margin="10,10,0,0" VerticalAlignment="Top" Width="239">

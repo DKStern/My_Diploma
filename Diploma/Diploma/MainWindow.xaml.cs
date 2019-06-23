@@ -308,6 +308,8 @@ namespace Diploma
                 logger.Flush();
                 GC.Collect(1, GCCollectionMode.Forced);
                 GC.WaitForPendingFinalizers();
+                selectBox.IsEnabled = true;
+                saveBtn.IsEnabled = true;
             }
             else
             {
@@ -1273,6 +1275,7 @@ namespace Diploma
                     logger.Add($"Папка выбрана: {path}");
                     logger.Add($"Файлов в папке: {fileCount.ToString()}");
                     logger.Add("");
+                    startBtn.IsEnabled = true;
                 }
                 else
                 {
