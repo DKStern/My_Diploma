@@ -34,12 +34,12 @@
                         <GroupBox Header="Выделить зону" HorizontalAlignment="Left" Margin="10,1,0,10" Width="482">
                             <Grid Margin="0,0,-2,0">
                                 <Label Content="Частота:" HorizontalAlignment="Left" Margin="8,2,0,33"/>
-                                <TextBox Name="xSBox" HorizontalAlignment="Left" Height="23" Margin="8,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55"/>
-                                <TextBox Name="xFBox" HorizontalAlignment="Left" Height="23" Margin="96,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55"/>
+                                <TextBox Name="xSBox" HorizontalAlignment="Left" Height="23" Margin="8,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55" TextChanged="xSBox_TextChanged"/>
+                                <TextBox Name="xFBox" HorizontalAlignment="Left" Height="23" Margin="96,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55" TextChanged="xFBox_TextChanged"/>
                                 <Label Content="-" HorizontalAlignment="Left" Margin="73,0,0,10" VerticalAlignment="Bottom" Height="23" Width="23"/>
                                 <Label Content="Глубина:" Margin="0,2,248,33" HorizontalAlignment="Right" Width="57"/>
-                                <TextBox Name="ySBox" HorizontalAlignment="Left" Height="23" Margin="167,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55"/>
-                                <TextBox Name="yFBox" HorizontalAlignment="Left" Height="23" Margin="255,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55"/>
+                                <TextBox Name="ySBox" HorizontalAlignment="Left" Height="23" Margin="167,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55" TextChanged="ySBox_TextChanged"/>
+                                <TextBox Name="yFBox" HorizontalAlignment="Left" Height="23" Margin="255,0,0,10" TextWrapping="Wrap" Text="" VerticalAlignment="Bottom" Width="55" TextChanged="yFBox_TextChanged"/>
                                 <Label Content="-" HorizontalAlignment="Left" Margin="232,0,0,10" VerticalAlignment="Bottom" Height="23" Width="23"/>
                                 <Button Content="Выделить" Name="selectBtn" Click="selectBtn_Click" Margin="319,10,10,10"/>
                             </Grid>

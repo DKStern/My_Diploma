@@ -97,7 +97,8 @@ namespace Diploma
         /// <summary>
         /// Создаёт изображение из файл с данными
         /// </summary>
-        private void CreateImg()
+        /// <param name="hasPath">Есть ли путь</param>
+        private void CreateImg(bool hasPath)
         {
             logger.Add("ВИЗУАЛИЗАТОР >> Визуализация данных...");
             Stopwatch watch = new Stopwatch();
@@ -110,13 +111,20 @@ namespace Diploma
             int count = 0;
             int len = 0;
             string line;
-            Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
-            dialog.Title = "Выбор файла спектрограммы";
-            dialog.Filter = "txt file (*.txt)|*.txt";
-            if (dialog.ShowDialog() == true)
-            {
-                readyDataPath = dialog.FileName;
 
+            if (!hasPath)
+            {
+                Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
+                dialog.Title = "Выбор файла спектрограммы";
+                dialog.Filter = "txt file (*.txt)|*.txt";
+                if (dialog.ShowDialog() == true)
+                {
+                    readyDataPath = dialog.FileName;
+                }
+            }
+
+            if (readyDataPath != null)
+            {
                 using (StreamReader sr = new StreamReader(readyDataPath))
                 {
                     logger.Add("ВИЗУАЛИЗАТОР >> Нахождение диапозона значения энергии...");
@@ -232,7 +240,7 @@ namespace Diploma
 
                         b = true;
                         if (helpList.Count > 0)
-                            if (x - offset <= helpList[helpList.Count-1])
+                            if (x - offset <= helpList[helpList.Count - 1])
                             {
                                 DrawV(ref bmp, yx, x, offset, 1000, helpList.Count * 1000, b);
                                 helpList.Remove(helpList[helpList.Count - 1]);
@@ -300,6 +308,11 @@ namespace Diploma
                 logger.Flush();
                 GC.Collect(1, GCCollectionMode.Forced);
                 GC.WaitForPendingFinalizers();
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Вы не выбрали файл с данными!");
+                return;
             }
         }
 
@@ -433,8 +446,8 @@ namespace Diploma
             int[] numbers;
             int index;
             bool firstTime = true;
-            string Path = $"{logPath}\\Output {DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year} {DateTime.Now.Hour}_{DateTime.Now.Minute}_{DateTime.Now.Second}.txt";
-            StreamWriter sw = new StreamWriter(Path, true);
+            readyDataPath = $"{logPath}\\Output.txt";
+            StreamWriter sw = new StreamWriter(readyDataPath, true);
             sw.WriteLine($"{startPosition} {lengthDepth}");
 
             Task readTask = new Task(() => ReaderFile(fileList));
@@ -561,7 +574,7 @@ namespace Diploma
 
 
             //Создание изображения
-            //CreateImg();  
+            CreateImg(true);  
         }
 
         /// <summary>
@@ -587,7 +600,7 @@ namespace Diploma
 
         private void createImg_Click(object sender, RoutedEventArgs e)
         {
-            CreateImg();
+            CreateImg(false);
         }
 
         private void addColorBtn_Click(object sender, RoutedEventArgs e)
@@ -700,6 +713,36 @@ namespace Diploma
             xF = int.Parse(xFBox.Text);
             yS = int.Parse(ySBox.Text);
             yF = int.Parse(yFBox.Text);
+            if (yS < startPosition)
+            {
+                System.Windows.MessageBox.Show($"Начальная глубина не может быть меньше {startPosition}!");
+                return;
+            }
+            if (yF <= yS)
+            {
+                System.Windows.MessageBox.Show("Конечная глубина не может быть меньше/равна начальной глубине!");
+                return;
+            }
+            if (yF > startPosition + lengthDepth)
+            {
+                System.Windows.MessageBox.Show($"Конечная глубина не может быть больше {startPosition + lengthDepth}!");
+                return;
+            }
+            if (xS < 0)
+            {
+                System.Windows.MessageBox.Show("Начальная частота не может быть меньше 0!");
+                return;
+            }
+            if (xF <= xS)
+            {
+                System.Windows.MessageBox.Show("Конечная частота не может быть меньше/равна начальной частоте!");
+                return;
+            }
+            if (xF > maxFreq)
+            {
+                System.Windows.MessageBox.Show($"Конечная частота не может быть больше {maxFreq} Гц!");
+                return;
+            }
             var xNewS = Math.Log(xS) * bufSize / Math.Log(maxFreq);
             var xNewF = Math.Log(xF) * bufSize / Math.Log(maxFreq);
             var xNew = Convert.ToInt32(xNewF - xNewS);
@@ -734,7 +777,7 @@ namespace Diploma
             sr.ReadLine();
             sr.ReadLine();
             iS = startPosition;
-            int h = 0;
+            int h = 0, w = 0;
             while (!sr.EndOfStream)
             {
                 line = sr.ReadLine();
@@ -745,9 +788,13 @@ namespace Diploma
                     sMas = line.Split(' ');
                     for (int i = Convert.ToInt32(xNewS); i <= Convert.ToInt32(xNewF); i++)
                     {
-                        helpBitMap.SetPixel(i, h, GetColors(min, max, double.Parse(sMas[i])));
-                        if (i == Convert.ToInt32(xNewF))
+                        helpBitMap.SetPixel(w, h, GetColors(min, max, double.Parse(sMas[i])));
+                        w++;
+                        if (w == helpBitMap.Width)
+                        {
+                            w = 0;
                             h++;
+                        }
                     }
                 }
                 iS++;
@@ -856,6 +903,47 @@ namespace Diploma
                         break;
                     }
             }
+        }
+
+        private void xSBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            xSBox.Text = CheckNum(xSBox.Text);
+        }
+
+        private void xFBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            xFBox.Text = CheckNum(xFBox.Text);
+        }
+
+        private string CheckNum(string str)
+        {
+            int a;
+            if (int.TryParse(str, out a))
+            {
+                return str;
+            }
+            else
+            {
+                for (int i=0;i<str.Length;i++)
+                {
+                    if (!char.IsNumber(str[i]))
+                    {
+                        str = str.Remove(i, 1);
+                        i--;
+                    }
+                }
+                return str;
+            }
+        }
+
+        private void ySBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            ySBox.Text = CheckNum(ySBox.Text);
+        }
+
+        private void yFBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            yFBox.Text = CheckNum(yFBox.Text);
         }
 
         /// <summary>
@@ -1143,7 +1231,7 @@ namespace Diploma
                     fstream.Seek(num + 4, SeekOrigin.Current);
                     fstream.Read(b4, 0, 4);
                     dnum = BitConverter.ToUInt32(b4, 0); // значение
-                    startPosition = Convert.ToInt32(dnum);
+                    startPosition = 0; // То, что в файле называется начало замера, на деле длина провода устройства, поэтому начало 0
                     depthStartBox.Text = Convert.ToString(startPosition);
 
                     // глубина
@@ -1233,12 +1321,6 @@ namespace Diploma
         /// <returns>Цвет</returns>
         private Color GetColors(double min, double max, double current)
         {
-            //double hStart = StartColor.GetHue();
-            //double hFinish = FinishColor.GetHue();
-            //var h = hFinish - hStart;
-            //h = h * help + min;
-            //color = ColorFromHSV(h, 1, 1);
-
             Color color1 = StartColor, color2 = FinishColor;
             double MIN = min, MAX = max;
             foreach (var item in colorData.ColorList)
