@@ -30,10 +30,11 @@ namespace Diploma
         private Logger logger, writeLogger;
         private long dataOffset;
         private bool isRequested = true, isReady = false;
-        private string logPath;
+        private string logPath, readyDataPath;
         private long nfft;
         private int offset = 300; //Offset for Scales
         private Bitmap[] numbers = new Bitmap[10];
+        private Bitmap mainBitMap;
 
         public MainWindow()
         {
@@ -112,12 +113,11 @@ namespace Diploma
             Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
             dialog.Title = "Выбор файла спектрограммы";
             dialog.Filter = "txt file (*.txt)|*.txt";
-            string sPath;
             if (dialog.ShowDialog() == true)
             {
-                sPath = dialog.FileName;
+                readyDataPath = dialog.FileName;
 
-                using (StreamReader sr = new StreamReader(sPath))
+                using (StreamReader sr = new StreamReader(readyDataPath))
                 {
                     logger.Add("ВИЗУАЛИЗАТОР >> Нахождение диапозона значения энергии...");
                     var st = new Stopwatch();
@@ -160,7 +160,7 @@ namespace Diploma
                 heigth = count + 2 * offset;
                 width = len + 2 * offset;
                 Bitmap bmp = new Bitmap(width, heigth);
-                using (var sr = new StreamReader(sPath))
+                using (var sr = new StreamReader(readyDataPath))
                 {
                     logger.Add("ВИЗУАЛИЗАТОР >> Создание изображения из файла...");
                     var st = new Stopwatch();
@@ -290,6 +290,7 @@ namespace Diploma
                 }
 
                 bmp.Save($"{logPath}\\Pic.png");
+                mainBitMap = new Bitmap(bmp);
                 bmp.Dispose();
                 watch.Stop();
                 logger.Add("ВИЗУАЛИЗАТОР >> Изображение сохранено: Pic.png");
@@ -407,17 +408,6 @@ namespace Diploma
             if (idx < 0.0)
                 return -1;
             return (int)Math.Floor(idx);
-        }
-
-        /// <summary>
-        /// Get new Index
-        /// </summary>
-        /// <param name="index">Текущий индекс</param>
-        /// <param name="nfft">Коэф. сжатия</param>
-        /// <returns>Индекс</returns>
-        private int GetIndexLin(int index, int nfft)
-        {
-            return (int)Math.Floor((double)index * bufSize / nfft);
         }
 
         /// <summary>
@@ -632,6 +622,8 @@ namespace Diploma
         /// <returns>Входит или нет</returns>
         private bool IsInside(int x, int y, int xS, int xF, int yS, int yF)
         {
+            x -= offset;
+            y -= offset;
             var pointStart = imageBox.TranslatePoint(new System.Windows.Point(0, 0), this);
             var xNew = Math.Exp((double)x / bufSize * Math.Log(maxFreq));
             var yNew = y + startPosition;
@@ -651,9 +643,9 @@ namespace Diploma
         {
             double r, g, b;
             double H = color.GetHue(), S = color.GetSaturation(), V = color.GetBrightness();
-            S -= 0.25;
-            if (V < 0)
-                V = 0;
+            S -= 0.5;
+            if (S < 0)
+                S = 0;
             var C = V * S;
             var X = C * (1 - Math.Abs(H / 60 % 2 - 1));
             var m = V - C;
@@ -702,24 +694,89 @@ namespace Diploma
 
         private void selectBtn_Click(object sender, RoutedEventArgs e)
         {
-            Bitmap b;
-            using (var fs = new FileStream("Pic.png", FileMode.Open))
-               b = new Bitmap(fs);
-            int xS, xF, yS, yF;
-
-            for (int i = 0; i < b.Width; i++)
-                for (int j = 0; j < b.Height; j++)
+            int xS, xF, yS, yF, iS = startPosition;
+            double min = double.MaxValue, max = double.MinValue;
+            xS = int.Parse(xSBox.Text);
+            xF = int.Parse(xFBox.Text);
+            yS = int.Parse(ySBox.Text);
+            yF = int.Parse(yFBox.Text);
+            var xNewS = Math.Log(xS) * bufSize / Math.Log(maxFreq);
+            var xNewF = Math.Log(xF) * bufSize / Math.Log(maxFreq);
+            var xNew = Convert.ToInt32(xNewF - xNewS);
+            Bitmap b = new Bitmap(mainBitMap), helpBitMap = new Bitmap(xNew + 1, yF - yS + 1);
+            StreamReader sr = new StreamReader(readyDataPath);
+            sr.ReadLine();
+            sr.ReadLine();
+            string[] sMas;
+            string line;
+            while (!sr.EndOfStream)
+            {
+                line = sr.ReadLine();
+                if (iS >= yS && iS <= yF)
                 {
-                    xS = Int32.Parse(xSBox.Text);
-                    xF = Int32.Parse(xFBox.Text);
-                    yS = Int32.Parse(ySBox.Text);
-                    yF = Int32.Parse(yFBox.Text);
+                    if (line[line.Length - 1] == ' ')
+                        line = line.Remove(line.Length - 1, 1);
+                    sMas = line.Split(' ');
+                    for (int i = Convert.ToInt32(xNewS); i <= Convert.ToInt32(xNewF); i++)
+                    {
+                        if (double.Parse(sMas[i]) < min)
+                            min = double.Parse(sMas[i]);
+                        if (double.Parse(sMas[i]) > max)
+                            max = double.Parse(sMas[i]);
+                    }
+                }
+                iS++;
+            }
+            sr.Dispose();
+            sr.Close();
+
+            sr = new StreamReader(readyDataPath);
+            sr.ReadLine();
+            sr.ReadLine();
+            iS = startPosition;
+            int h = 0;
+            while (!sr.EndOfStream)
+            {
+                line = sr.ReadLine();
+                if (iS >= yS && iS <= yF)
+                {
+                    if (line[line.Length - 1] == ' ')
+                        line = line.Remove(line.Length - 1, 1);
+                    sMas = line.Split(' ');
+                    for (int i = Convert.ToInt32(xNewS); i <= Convert.ToInt32(xNewF); i++)
+                    {
+                        helpBitMap.SetPixel(i, h, GetColors(min, max, double.Parse(sMas[i])));
+                        if (i == Convert.ToInt32(xNewF))
+                            h++;
+                    }
+                }
+                iS++;
+            }
+            sr.Dispose();
+            sr.Close();
+
+
+            int x = 0, y = 0;
+            for (int i = offset; i < b.Width - offset; i++)
+                for (int j = offset; j < b.Height - offset; j++)
+                {
                     if (!IsInside(i, j, xS, xF, yS, yF))
                     {
                         b.SetPixel(i, j, GetDarker(b.GetPixel(i, j)));
                     }
+                    else
+                    {
+                        b.SetPixel(i, j, helpBitMap.GetPixel(x, y));
+                        if (y < yF - yS)
+                            y++;
+                        else
+                        {
+                            y = 0;
+                            x++;
+                        }
+                    }
                 }
-            b.Save("Pic.png");
+            b.Save($"{logPath}\\Pic.png");
             b.Dispose();
             ShowImg();
         }
