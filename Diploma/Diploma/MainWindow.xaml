@@ -59,8 +59,6 @@
                     </Grid>
                 </GroupBox>
                 <Button x:Name="startBtn" Content="Начать обработку" HorizontalAlignment="Left" Margin="10,0,0,5" Width="242" Height="42" VerticalAlignment="Bottom" Click="startBtn_Click" IsEnabled="False"/>
-                <ProgressBar x:Name="progressBar" HorizontalAlignment="Left" Margin="10,0,0,52" Width="239" Height="23" VerticalAlignment="Bottom"/>
-                <Label Content="Процесс обработки:" HorizontalAlignment="Left" Margin="10,0,0,80" Height="26" VerticalAlignment="Bottom"/>
                 <GroupBox Header="Цвета визуализации" HorizontalAlignment="Left" Height="220" Margin="10,10,0,0" VerticalAlignment="Top" Width="239">
                     <Grid Margin="0,0,0,3">
                         <Label Content="Начальный цвет:" Margin="10,10,88,0" Height="27" VerticalAlignment="Top"></Label>

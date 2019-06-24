@@ -542,7 +542,6 @@ namespace Diploma
                     plan.Dispose();
                     GC.Collect();
 
-                    progressBar.Value++;
                     stopwatch.Stop();
                     logger.Add($"ПОТОК ОБРАБОТКИ ДАННЫХ >> Вычисление {counter++} дорожки заняло: {stopwatch.Elapsed.ToString()}");
                     logger.Flush();
@@ -658,9 +657,9 @@ namespace Diploma
         {
             double r, g, b;
             double H = color.GetHue(), S = color.GetSaturation(), V = color.GetBrightness();
-            S -= 0.5;
-            if (S < 0)
-                S = 0;
+            V -= 0.25;
+            if (V < 0)
+                V = 0;
             var C = V * S;
             var X = C * (1 - Math.Abs(H / 60 % 2 - 1));
             var m = V - C;
@@ -1179,7 +1178,7 @@ namespace Diploma
             {
                 tdmsPath = dialog.FileName;
             }
-            if (path != "" && path != null)
+            if (tdmsPath != "" && tdmsPath != null)
             {
                 using (FileStream fstream = new FileStream(tdmsPath, FileMode.Open))
                 {
@@ -1269,9 +1268,8 @@ namespace Diploma
                 {
                     path = folderBrowserDialog.SelectedPath;
                     fileCount = Directory.GetFiles(path).Length;
+                    lengthDepth = fileCount;
                     depthFinishBox.Text = Convert.ToString(fileCount);
-                    progressBar.Value = 0;
-                    progressBar.Maximum = fileCount;
                     logger.Add($"Папка выбрана: {path}");
                     logger.Add($"Файлов в папке: {fileCount.ToString()}");
                     logger.Add("");
