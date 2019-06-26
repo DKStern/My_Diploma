@@ -1216,7 +1216,7 @@ namespace Diploma
                     fstream.Seek(num + 4, SeekOrigin.Current);
                     fstream.Read(b8, 0, 8);
                     var dnum = BitConverter.ToDouble(b8, 0); // значение
-                    maxFreq = Convert.ToDouble(dnum);
+                    maxFreq = Convert.ToDouble(dnum/2); //Результирующая в 2 раза меньше исходной
 
                     // Шаг глубины
                     fstream.Read(b4, 0, 4);
